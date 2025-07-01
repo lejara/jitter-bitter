@@ -1,0 +1,21 @@
+{
+  "name": "Jitter Bitter Driver",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@playwright/test": "^1.53.2",
+    "@types/node": "^24.0.8"
+  },
+  "dependencies": {
+    "electron": "^37.1.0",
+    "playwright": "^1.53.2"
+  }
+}

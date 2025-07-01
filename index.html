@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Automation Tool</title>
+  </head>
+  <body>
+    <h1>Task Automation GUI</h1>
+    <button id="runBtn">Run Automation</button>
+    <p id="status">Status: Idle</p>
+
+    <script>
+      const runBtn = document.getElementById("runBtn");
+      const status = document.getElementById("status");
+
+      runBtn.addEventListener("click", async () => {
+        status.textContent = "Status: Running...";
+        await window.electronAPI.runScript();
+        status.textContent = "Status: Done!";
+      });
+    </script>
+  </body>
+</html>
