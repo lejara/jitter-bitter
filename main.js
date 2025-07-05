@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
-const { runAutomation, init } = require("./automation/test_click");
+const { runAutomation, init, fontFix } = require("./automation/test_click");
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -21,6 +21,10 @@ async function createWindow() {
 // Listen for renderer signal to run script
 ipcMain.handle("run-script", async () => {
   await runAutomation();
+});
+
+ipcMain.handle("run-font-fix", async () => {
+  await fontFix();
 });
 
 app.whenReady().then(createWindow);

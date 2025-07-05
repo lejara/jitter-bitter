@@ -24,7 +24,7 @@ async function init() {
 
   page = await browser.newPage();
   await page.goto(
-    "https://jitter.video/file/?id=5TO8y3oziHnvWxBVLGWwnvvr&nodeId=GhOVX31xagbnTKErKfY3x"
+    "https://jitter.video/file/?id=opZd6g50lyddJDRBSuQ57s1J&nodeId=GhOVX31xagbnTKErKfY3x"
   );
 }
 
@@ -33,11 +33,14 @@ async function init() {
 const locators = {
   parentSelectedClass: "layerList-module--selected--54ce4",
   childLayerListClass: "layerList-module--parentInSelection",
-  scrollContainerClass: 'data-sentry-element="EditorPanel"',
+  scrollContainerDataAtt: 'data-sentry-element="EditorPanel"',
+  missingFontDataAtt: `data-sentry-component="MissingFontInspectorImpl"`,
+  missingFontNameClass: `text-module--noWrap--78afb`,
   textSVG: 'path[d^="M5 6V4H19V8H17V6H13V18H15V20H13H11H9V"]',
 };
 const enterCount = 100;
-const parentSelectedID = "parent-frame-333";
+const parentSelectedID = "parent-frame-333"; //TODO: make this dynamic
+const supportedFonts = ["SF Pro"];
 async function runAutomation() {
   await scan();
 }
@@ -74,7 +77,7 @@ async function scan() {
   while (true) {
     let element = await page.locator(`[data-index="${ctr}"] > *:first-child`, {
       hasText: undefined,
-    });
+    }); //TODO: try searching in the continer instead of the whole page
 
     const computedPaddingStart = await element.evaluate((node) => {
       node.scrollIntoView({ behavior: "instant", block: "center" });
@@ -143,6 +146,46 @@ async function scan() {
   // );
 }
 
+//Note: must be called when an item list is clicked
+async function fontFix() {
+  const missingFonDiv = await page.locator(`[${locators.missingFontDataAtt}]`);
+  if ((await missingFonDiv.count()) > 0) {
+    //Font is Missing
+    const fontName = await missingFonDiv
+      .locator(`.${locators.missingFontNameClass}`)
+      .last()
+      .innerText();
+
+    const isFontSupoorted = supportedFonts.find((font) => font === fontName);
+    if (!isFontSupoorted) {
+      console.log(`Font is not supported: ${fontName}`);
+      return;
+    }
+
+    await missingFonDiv.locator(`button`).click();
+    ctr = 1;
+    while (ctr < 100) {
+      const fontOption = await page.locator(
+        '[id^="downshift-"][id$="-item-' + ctr + '"]'
+      );
+      const optionName = await fontOption
+        .locator(`[data-sentry-element="Ellipsis"]`)
+        .innerText();
+
+      if (optionName == fontName) {
+        await fontOption.click();
+        console.log(`Font fixed: ${fontName}`);
+        break;
+      }
+      ctr++;
+    }
+
+    if (ctr >= 100) {
+      console.log(`Font not found in options: ${fontName}`);
+    }
+  }
+}
+
 async function GetPaddingInlineStart(locator) {
   return await locator.evaluate((node) =>
     parseFloat(getComputedStyle(node).getPropertyValue("padding-inline-start"))
@@ -156,9 +199,11 @@ async function printDOM(locator) {
 
 async function changeText(textButton) {
   await textButton.click();
+  await fontFix();
   await textButton.press("Enter");
   await page.keyboard.press("Backspace");
   await page.keyboard.insertText("Hello, world!");
+  console.log("Text Replaced");
 }
 
 async function debugPrintChildValues(locatorElement) {
@@ -175,4 +220,4 @@ async function debugPrintChildValues(locatorElement) {
   ///
 }
 
-module.exports = { runAutomation, init };
+module.exports = { runAutomation, init, fontFix };

@@ -2,21 +2,31 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Automation Tool</title>
+    <title>Jitter Bitter</title>
   </head>
   <body>
-    <h1>Task Automation GUI</h1>
+    <h1>Jitter Bitter</h1>
     <button id="runBtn">Run Automation</button>
+    <button id="runFontFix">Run Font Fix</button>
     <p id="status">Status: Idle</p>
 
     <script>
       const runBtn = document.getElementById("runBtn");
+      const runFontFixBtn = document.getElementById("runFontFix");
+
       const status = document.getElementById("status");
 
+      //Events
       runBtn.addEventListener("click", async () => {
         status.textContent = "Status: Running...";
         await window.electronAPI.runScript();
         status.textContent = "Status: Done!";
+      });
+
+      runFontFixBtn.addEventListener("click", async () => {
+        status.textContent = "Status: Running Font Fix...";
+        await window.electronAPI.runFontFix();
+        status.textContent = "Status: Font Fix Done!";
       });
     </script>
   </body>
