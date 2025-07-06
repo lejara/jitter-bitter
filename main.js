@@ -1,6 +1,10 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
-const { runAutomation, init, fontFix } = require("./automation/test_click");
+const {
+  runScanReplace,
+  runSVGReplace,
+  init,
+} = require("./automation/automation_main");
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -19,12 +23,12 @@ async function createWindow() {
 }
 
 // Listen for renderer signal to run script
-ipcMain.handle("run-script", async () => {
-  await runAutomation();
+ipcMain.handle("run-scan-Replace", async () => {
+  await runScanReplace();
 });
 
-ipcMain.handle("run-font-fix", async () => {
-  await fontFix();
+ipcMain.handle("run-svg-Replace", async () => {
+  await runSVGReplace();
 });
 
 app.whenReady().then(createWindow);

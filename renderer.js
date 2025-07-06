@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  runScript: () => ipcRenderer.invoke("run-script"),
-  runFontFix: () => ipcRenderer.invoke("run-font-fix"),
+  runScanReplaceScript: () => ipcRenderer.invoke("run-scan-Replace"),
+  runSVGReplaceScript: () => ipcRenderer.invoke("run-svg-Replace"),
 });

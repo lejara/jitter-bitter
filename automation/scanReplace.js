@@ -1,35 +1,13 @@
 const { chromium } = require("playwright");
 const { text } = require("stream/consumers");
 
-let page = null;
-let browser = null;
-
-async function init() {
-  const userDataDir =
-    "C:/Users/Lejara/AppData/Local/Google/Chrome/User Data/Default"; //TODO: make this work for anyone
-  browser = await chromium.launchPersistentContext(userDataDir, {
-    headless: false,
-    viewport: null,
-    userAgent:
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-    args: [
-      "--disable-blink-features=AutomationControlled",
-      "--no-sandbox",
-      "--disable-web-security",
-      "--disable-features=IsolateOrigins,site-per-process",
-      "--disable-site-isolation-trials",
-      "--disable-extensions",
-    ],
-  });
-
-  page = await browser.newPage();
-  await page.goto(
-    "https://jitter.video/file/?id=opZd6g50lyddJDRBSuQ57s1J&nodeId=GhOVX31xagbnTKErKfY3x"
-  );
-}
-
 ///class: layerList-module--chevron
 //padding-inline-start in .layerList-module--layer--1eb2e
+
+const enterCount = 100;
+const parentSelectedID = "parent-frame-333"; //TODO: make this dynamic
+const supportedFonts = ["SF Pro"];
+
 const locators = {
   parentSelectedClass: "layerList-module--selected--54ce4",
   childLayerListClass: "layerList-module--parentInSelection",
@@ -38,13 +16,8 @@ const locators = {
   missingFontNameClass: `text-module--noWrap--78afb`,
   textSVG: 'path[d^="M5 6V4H19V8H17V6H13V18H15V20H13H11H9V"]',
 };
-const enterCount = 100;
-const parentSelectedID = "parent-frame-333"; //TODO: make this dynamic
-const supportedFonts = ["SF Pro"];
-async function runAutomation() {
-  await scan();
-}
-async function scan() {
+
+async function scanReplace() {
   //Get selected Element
   let selectedElement = await page
     .locator(`.${locators.parentSelectedClass}`)
@@ -146,12 +119,21 @@ async function scan() {
   // );
 }
 
+async function changeText(textButton) {
+  await textButton.click();
+  await fixMissingFont();
+  await textButton.press("Enter");
+  await page.keyboard.press("Backspace");
+  await page.keyboard.insertText("Hello, world!");
+  console.log("Text Replaced");
+}
+
 //Note: must be called when an item list is clicked
-async function fontFix() {
+async function fixMissingFont() {
   const missingFonDiv = await page.locator(`[${locators.missingFontDataAtt}]`);
   if ((await missingFonDiv.count()) > 0) {
     //Font is Missing
-    const fontName = await missingFonDiv
+    const fontName = await missingFonDiv //TODO: fix this make it actually search the  list
       .locator(`.${locators.missingFontNameClass}`)
       .last()
       .innerText();
@@ -197,15 +179,6 @@ async function printDOM(locator) {
   console.log(domContent);
 }
 
-async function changeText(textButton) {
-  await textButton.click();
-  await fontFix();
-  await textButton.press("Enter");
-  await page.keyboard.press("Backspace");
-  await page.keyboard.insertText("Hello, world!");
-  console.log("Text Replaced");
-}
-
 async function debugPrintChildValues(locatorElement) {
   //
   const parent = locatorElement;
@@ -220,4 +193,4 @@ async function debugPrintChildValues(locatorElement) {
   ///
 }
 
-module.exports = { runAutomation, init, fontFix };
+module.exports = { scanReplace };

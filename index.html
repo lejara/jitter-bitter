@@ -6,27 +6,27 @@
   </head>
   <body>
     <h1>Jitter Bitter</h1>
-    <button id="runBtn">Run Automation</button>
-    <button id="runFontFix">Run Font Fix</button>
+    <button id="runSRBtn">Scan Replace</button>
+    <button id="runSVGR">SVG Replace</button>
     <p id="status">Status: Idle</p>
 
     <script>
-      const runBtn = document.getElementById("runBtn");
-      const runFontFixBtn = document.getElementById("runFontFix");
+      const runSRBtn = document.getElementById("runSRBtn");
+      const runSVGRBtn = document.getElementById("runSVGR");
 
       const status = document.getElementById("status");
 
       //Events
-      runBtn.addEventListener("click", async () => {
-        status.textContent = "Status: Running...";
-        await window.electronAPI.runScript();
-        status.textContent = "Status: Done!";
+      runSRBtn.addEventListener("click", async () => {
+        status.textContent = "Status: Running Scan Replace...";
+        await window.electronAPI.runScanReplaceScript();
+        status.textContent = "Status: Scan Replace Done!";
       });
 
-      runFontFixBtn.addEventListener("click", async () => {
-        status.textContent = "Status: Running Font Fix...";
-        await window.electronAPI.runFontFix();
-        status.textContent = "Status: Font Fix Done!";
+      runSVGRBtn.addEventListener("click", async () => {
+        status.textContent = "Status: Running SVG Replace...";
+        await window.electronAPI.runSVGReplaceScript();
+        status.textContent = "Status: SVG Replace Done!";
       });
     </script>
   </body>
