@@ -27,7 +27,7 @@ async function init() {
   });
 
   global.page = await browser.newPage();
-  await page.goto("https://jitter.video/file/?id=JcmdWafAfhKG21eEFQSryysG");
+  await page.goto("https://jitter.video/file/?id=TUHiwDO4kF1b3GI15P82XBNR");
 }
 
 // async function init() {
