@@ -4,7 +4,7 @@ const fs = require("fs");
 const xxhash = require("xxhash-wasm");
 const { spawn } = require("child_process");
 const parsepathData = require("svg-parse-path-normalized");
-const { text } = require("stream/consumers");
+const pLimit = require("p-limit");
 const { parsePathDataNormalized, pathDataToD } = parsepathData;
 
 const textDataPath = path.join(
@@ -76,7 +76,7 @@ async function svgReplace() {
   //Build hash table for svg paths in text Data
   const figmaTextData = JSON.parse(fs.readFileSync(textDataPath, "utf-8"));
   //Note: the key are the same layer ids in figma.
-  const figmaDataDictionary = { pathHash: "" };
+  const figmaDataDictionary = {};
   for (const key in figmaTextData) {
     let path = figmaTextData[key].svg.path;
     path = canonicalizePath(path);
@@ -89,7 +89,37 @@ async function svgReplace() {
   dumpToJSON(figmaDataDictionary, "figmaDataDictionary.json");
   // console.log(figmaDataDictionary);
 
-  //Compare the hashes of each dictionary
+  //Compare the hashes of each dictionary with fuzzy matching. NOTE: SLOW!
+  // const limit = pLimit(10);
+  // const matchPromises = [];
+  // for (const key in jitterSVGDataDictionary) {
+  //   const jitterNormPaths = jitterSVGDataDictionary[key].normalizedPaths;
+  //   for (const jitterNormPath of jitterNormPaths) {
+  //     for (const figmaKey in figmaDataDictionary) {
+  //       // if (figmaDataDictionary[figmaKey].pathHash === hash) {
+  //       matchPromises.push(
+  //         limit(async () => {
+  //           const { match, distance } = await fuzzyEqual(
+  //             jitterNormPath,
+  //             figmaDataDictionary[figmaKey].normalizedPath
+  //           );
+  //           if (match) {
+  //             return {
+  //               layerId: figmaKey,
+  //               svgUrl: jitterSVGDataDictionary[key].blobUrl,
+  //               svgPath: jitterSVGDataDictionary[key].pathArray,
+  //             };
+  //           }
+  //           return null;
+  //         })
+  //       );
+  //     }
+  //   }
+  // }
+  // const rawResults = await Promise.all(matchPromises);
+  // const matchedSVGs = rawResults.filter((r) => r !== null);
+
+  //Compare the hashes of a path
   const matchedSVGs = [];
   for (const key in jitterSVGDataDictionary) {
     const jitterHashes = jitterSVGDataDictionary[key].hashes;
@@ -105,8 +135,7 @@ async function svgReplace() {
       }
     }
   }
-  // console.log("Matched SVGs:", matchedSVGs);
-  //TODO: only matching some. not all. BAD
+
   for (const match of matchedSVGs) {
     console.log(`MATCHED Layer ID: ${match.layerId}, SVG URL: ${match.svgUrl}`);
   }
@@ -117,11 +146,10 @@ async function hash(data) {
   return h64(data);
 }
 
-function fuzzyEqual(d1, d2, { tol = 1e-3, samples = 500 } = {}) {
+function fuzzyEqual(d1, d2, { tol = 0.02, samples = 500 } = {}) {
   return new Promise((resolve, reject) => {
     const py = spawn("python", [svgFuzzyMatchPath]);
     const payload = JSON.stringify({ d1, d2, tol, samples });
-
     let stdout = "",
       stderr = "";
     py.stdout.on("data", (chunk) => (stdout += chunk));
@@ -151,7 +179,7 @@ function canonicalizePath(d, precision = 3) {
   let pathData = parsePathDataNormalized(d, {
     // arcToCubic: true,
     // quadraticToCubic: true,
-    decimals: 1,
+    decimals: 0,
   });
 
   // 2. Find the minimum X/Y across all commands
