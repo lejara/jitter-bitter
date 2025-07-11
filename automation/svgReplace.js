@@ -25,7 +25,10 @@ async function svgReplace() {
   // await fileChooser.setFiles("/absolute/path/to/your/file.png");
 
   //   console.log(page);
-  await injectRoute();
+}
+
+async function svgPathTest() {
+  await injectSVGCapture();
   await page.reload();
   await sleep(3000); //TODO: make a proper execution flow
 
@@ -146,64 +149,6 @@ async function hash(data) {
   return h64(data);
 }
 
-function fuzzyEqual(d1, d2, { tol = 0.02, samples = 500 } = {}) {
-  return new Promise((resolve, reject) => {
-    const py = spawn("python", [svgFuzzyMatchPath]);
-    const payload = JSON.stringify({ d1, d2, tol, samples });
-    let stdout = "",
-      stderr = "";
-    py.stdout.on("data", (chunk) => (stdout += chunk));
-    py.stderr.on("data", (chunk) => (stderr += chunk));
-
-    py.on("close", (code) => {
-      if (stderr) return reject(new Error(stderr));
-      try {
-        const result = JSON.parse(stdout);
-        resolve(result);
-      } catch (err) {
-        reject(err);
-      }
-    });
-
-    // send JSON on stdin and close
-    py.stdin.write(payload);
-    py.stdin.end();
-  });
-}
-
-function canonicalizePath(d, precision = 3) {
-  // 1. Parse & normalize in one shot
-  //    - defaults: toAbsolute=true, unshort=true
-  //    - we turn on arcToCubic & quadraticToCubic so everything is in Béziers
-  //    - decimals: -1 means “no rounding” right now
-  let pathData = parsePathDataNormalized(d, {
-    // arcToCubic: true,
-    // quadraticToCubic: true,
-    decimals: 0,
-  });
-
-  // 2. Find the minimum X/Y across all commands
-  const xs = [],
-    ys = [];
-  for (let cmd of pathData) {
-    for (let i = 0; i < cmd.values.length; i += 2) {
-      xs.push(cmd.values[i]);
-      ys.push(cmd.values[i + 1]);
-    }
-  }
-  const minX = Math.min(...xs);
-  const minY = Math.min(...ys);
-
-  // 3. Translate every point so the shape’s top-left is at (0,0)
-  pathData = pathData.map((cmd) => ({
-    type: cmd.type,
-    values: cmd.values.map((v, i) => (i % 2 === 0 ? v - minX : v - minY)),
-  }));
-
-  // 4. Stringify with fixed precision (and no further minification)
-  return pathDataToD(pathData, precision, /* minify */ false);
-}
-
 function createRegexFromSnippet(snippet, flags = "g") {
   return new RegExp(
     snippet
@@ -214,11 +159,11 @@ function createRegexFromSnippet(snippet, flags = "g") {
   );
 }
 
-async function injectRoute() {
+async function injectSVGCapture() {
   await page.route("**/app-*.js", async (route) => {
     const response = await route.fetch();
     let body = await response.text();
-    body = injectSVGCreation(body);
+    body = replaceJSToSVGCapture(body);
 
     const container = ` window.svgsJB = {};`;
     body = container + body;
@@ -230,7 +175,7 @@ async function injectRoute() {
   });
 }
 
-async function blodReplace() {
+async function blodReplaceTest() {
   await page.addInitScript(() => {
     const OriginalBlob = window.Blob;
     const originalCreateObjectURL = URL.createObjectURL;
@@ -312,18 +257,14 @@ function injectPrintforTextSVG() {
   );
 }
 
-function injectSVGCreation(body) {
+function replaceJSToSVGCapture(body) {
   return body.replace(
     /o\.aC\.map\(g\)\.every\(\(e=>void 0===r\[e\]\)\)\?t=e\.imageWithEmptyUserValues:\(v\(e\.svgInfo,i\),t=await p\(e\.svgInfo\.doc\)\);return\{actions:\[\{type:"updateObj",objId:n,data:\{_image:t,_svgInfo:e\.svgInfo,_assetsStatus:"ready"\}\}\]\}/,
     `o.aC.map(g).every((e=>void 0===r[e]))?t=e.imageWithEmptyUserValues:(v(e.svgInfo,i),t=await p(e.svgInfo.doc));window.svgsJB[n]=t?.currentSrc;console.log("🪵 nodeId:", n, "🖼️ image:", t?.currentSrc);return{actions:[{type:"updateObj",objId:n,data:{_image:t,_svgInfo:e.svgInfo,_assetsStatus:"ready"}}]}`
   );
-
-  return body.replace(
-    /o\.aC\.map\(g\)\.every\(\(e=>void 0===r\[e\]\)\)\?t=e\.imageWithEmptyUserValues:\(v\(e\.svgInfo,i\),t=await p\(e\.svgInfo\.doc\)\);return\{actions:\[\{type:"updateObj",objId:n,data:\{_image:t,_svgInfo:e\.svgInfo,_assetsStatus:"ready"\}\}\]\}/,
-    `o.aC.map(g).every((e=>void 0===r[e]))?t=e.imageWithEmptyUserValues:(v(e.svgInfo,i),t=await p(e.svgInfo.doc));window.svgsForJB[n]=t?.currentSrc;console.log("🪵 nodeId:", n, "🖼️ image:", t?.currentSrc);return{actions:[{type:"updateObj",objId:n,data:{_image:t,_svgInfo:e.svgInfo,_assetsStatus:"ready"}}]}`
-  );
 }
 
+//Utils
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -339,6 +280,61 @@ function dumpToJSON(data, fileName = "dump.json") {
     ),
     "utf-8"
   );
+}
+
+function canonicalizePath(d, precision = 3) {
+  // 1. Parse & normalize in one shot
+  //    - defaults: toAbsolute=true, unshort=true
+  //    - decimals: -1 means “no rounding” right now
+  let pathData = parsePathDataNormalized(d, {
+    decimals: 0,
+  });
+
+  // 2. Find the minimum X/Y across all commands
+  const xs = [],
+    ys = [];
+  for (let cmd of pathData) {
+    for (let i = 0; i < cmd.values.length; i += 2) {
+      xs.push(cmd.values[i]);
+      ys.push(cmd.values[i + 1]);
+    }
+  }
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+
+  // 3. Translate every point so the shape’s top-left is at (0,0)
+  pathData = pathData.map((cmd) => ({
+    type: cmd.type,
+    values: cmd.values.map((v, i) => (i % 2 === 0 ? v - minX : v - minY)),
+  }));
+
+  // 4. Stringify with fixed precision (and no further minification)
+  return pathDataToD(pathData, precision, /* minify */ false);
+}
+
+function svgFuzzyEqual(d1, d2, { tol = 0.02, samples = 500 } = {}) {
+  return new Promise((resolve, reject) => {
+    const py = spawn("python", [svgFuzzyMatchPath]);
+    const payload = JSON.stringify({ d1, d2, tol, samples });
+    let stdout = "",
+      stderr = "";
+    py.stdout.on("data", (chunk) => (stdout += chunk));
+    py.stderr.on("data", (chunk) => (stderr += chunk));
+
+    py.on("close", (code) => {
+      if (stderr) return reject(new Error(stderr));
+      try {
+        const result = JSON.parse(stdout);
+        resolve(result);
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    // send JSON on stdin and close
+    py.stdin.write(payload);
+    py.stdin.end();
+  });
 }
 
 module.exports = { svgReplace };
