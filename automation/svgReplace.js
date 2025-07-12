@@ -19,11 +19,8 @@ const dataDics = {
   jitterSVGDataDictionary: {},
   figmaDataDictionary: {},
 };
-async function OnBeforePageLoad() {
-  await injectSVGCapture();
-}
 
-async function OnStart() {
+async function initDicionaries() {
   // Setup svg data dictionary
   dataDics.jitterSVGDataDictionary = await page.evaluate(async () => {
     let dataDic = {};
@@ -391,4 +388,4 @@ function svgFuzzyEqual(d1, d2, { tol = 0.02, samples = 500 } = {}) {
   });
 }
 
-module.exports = { svgReplace, OnBeforePageLoad, OnStart };
+module.exports = { svgReplace, injectSVGCapture, initDicionaries };
