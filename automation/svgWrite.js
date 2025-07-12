@@ -28,6 +28,8 @@ const { dumpToJSON } = require("./svgReplace");
 //     "SF Pro Display — Bold"
 // ]
 
+// #region Font Loading
+
 //NOTE: only use SF Pro Text and SF Pro Display for now
 global.loadedFonts;
 const fonts = [
@@ -80,8 +82,6 @@ const fonts = [
   // },
 ];
 
-const fontsFolderPath = path.join(__dirname, "../fonts/SF-Pro.ttf");
-
 function loadFonts() {
   loadedFonts = fonts.map((fontFamily) => {
     return {
@@ -105,7 +105,9 @@ function findFontByName(name, style) {
   }
   for (const fontFamily of loadedFonts) {
     if (fontFamily.names.includes(name)) {
-      const fontStyle = fontFamily.styles.find((s) => s.name === style);
+      const fontStyle = fontFamily.styles.find(
+        (s) => normalizeString(s.name) === normalizeString(style)
+      );
       if (fontStyle) {
         return fontStyle.font;
       }
@@ -120,6 +122,10 @@ function findFontByName(name, style) {
   return getFallbackFont();
 }
 
+function normalizeString(str) {
+  return str.trim().toLowerCase();
+}
+
 function getFallbackFont(style = "Regular") {
   if (!loadedFonts) {
     console.error("Fonts not loaded. Call loadFonts() first.");
@@ -128,7 +134,9 @@ function getFallbackFont(style = "Regular") {
 
   for (const fontFamily of loadedFonts) {
     if (fontFamily.names.includes("SF Pro")) {
-      const fontStyle = fontFamily.styles.find((s) => s.name === style);
+      const fontStyle = fontFamily.styles.find(
+        (s) => normalizeString(s.name) === normalizeString(style)
+      );
       if (fontStyle) {
         return fontStyle.font;
       } else {
@@ -137,12 +145,13 @@ function getFallbackFont(style = "Regular") {
     }
   }
 }
+// #endregion
 // #region XML Parser
 function createXML(name, attributes = {}, text = "") {
   const node = { [name]: {} };
 }
 
-function parseXML(xmlString) {
+function parseTextXML(xmlString) {
   const options = {
     ignoreAttributes: false,
     preserveOrder: true,
@@ -151,7 +160,11 @@ function parseXML(xmlString) {
   const parser = new XMLParser(options);
   try {
     const jsonObj = parser.parse(xmlString);
-    return flattenTextNodes(jsonObj);
+    const nodes = flattenTextNodes(jsonObj);
+    for (const node of nodes) {
+      node.fontRef = findFontByName(node.font, node.style);
+    }
+    return nodes;
   } catch (error) {
     console.error("Error parsing XML:", error);
     return null;
@@ -159,116 +172,117 @@ function parseXML(xmlString) {
 }
 
 // recursive helper
-function flattenTextNodes(nodes, parentStyle = "regular") {
+function flattenTextNodes(
+  nodes,
+  parentStyle = "regular",
+  parentFontSize = "16",
+  parentFont = "SF Pro"
+) {
   const defaults = {
-    fontSize: 16,
-    font: "SF Pro", // default font
     color: "#000000",
   };
 
   const out = [];
   for (const node of nodes) {
     // override style if this node has one, otherwise inherit
+    //TODO: add letter spacing
     const style = node[":@"]?.["@_style"] || parentStyle;
+    const fontSize = node[":@"]?.["@_fontSize"] || parentFontSize;
+    const font = node[":@"]?.["@_font"] || parentFont;
 
     if (node["#text"] != null) {
       // leaf text node
       out.push({
         text: node["#text"],
         style,
+        fontSize: parseFloat(fontSize),
+        font,
         ...defaults,
       });
     } else if (Array.isArray(node.text)) {
       // nested <text> … </text> child — recurse
-      out.push(...flattenTextNodes(node.text, style));
+      out.push(...flattenTextNodes(node.text, style, fontSize, font));
     }
   }
   return out;
 }
 
 // #endregion XML Parser
+// #region SVG Writing
+// const runs =
+// [
+//   {
+//     text: 'hit',
+//     style: 'regular',
+//     fontSize: 16,
+//     font: 'SF Pro',
+//     color: '#000000',
+//     fontRef: TextToSVG { font: [Font] }
+//   },
+//   {
+//     text: 'this is bold',
+//     style: 'bold',
+//     fontSize: 16,
+//     font: 'SF Pro',
+//     color: '#000000',
+//     fontRef: TextToSVG { font: [Font] }
+//   },
+//   {
+//     text: 'this is italic',
+//     style: 'italic',
+//     fontSize: 16,
+//     font: 'SF Pro',
+//     color: '#000000',
+//     fontRef: TextToSVG { font: [Font] }
+//   }
+// ]
+function getSVGPath(runs) {
+  let x = 0;
+  const pathPieces = runs.map((run) => {
+    const { fontRef, fontSize, text } = run;
+    let textAdjusted = text.trim() + " ";
 
-async function writeTextToSVGTest() {
-  //TODO: check font size matches figma font
-  //TODO: get all fonts
+    const { width, ascender } = fontRef.getMetrics(textAdjusted, {
+      fontSize,
+      kerning: true,
+    });
 
-  // loadSync can also take a Buffer if you’ve already read the font:
-  const textToSVG = TextToSVG.loadSync(fontsFolderPath);
+    const d = fontRef.getD(textAdjusted, {
+      x,
+      y: ascender,
+      fontSize,
+      kerning: true,
+    });
+    x += width;
+    return d;
+  });
 
-  const attributes = { fill: "#000", stroke: "black" }; // SVG attributes for the path
-  const options = {
-    x: 0, // start‐x
-    y: 0, // start‐y (baseline)
-    fontSize: 48, // units = user coordinates
-    anchor: "top", // align your block
-    attributes,
-  };
-
-  const pathData = textToSVG.getPath("Love you Allen", options);
-  // wrap it up:
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg">
-  <path d="${pathData}" ${Object.entries(attributes)
-    .map(([k, v]) => `${k}="${v}"`)
-    .join(" ")} />
-</svg>`;
-
-  dumpToJSON({ svg: svg }, "textSVG.json");
-
-  //   const fs        = require('fs');
-  // const TextToSVG = require('text-to-svg');
-
-  // // 1) load one instance per font/style you need
-  // const regular = TextToSVG.loadSync('fonts/Roboto-Regular.ttf');
-  // const bold    = TextToSVG.loadSync('fonts/Roboto-Bold.ttf');
-  // const italic  = TextToSVG.loadSync('fonts/Roboto-Italic.ttf');
-
-  // // 2) define your “styled runs”
-  // const fontSize = 72;
-  // const baseline = fontSize;   // y-coordinate of the first line’s baseline
-  // const runs = [
-  //   { text: 'This ',    font: regular },
-  //   { text: 'mixes ',   font: bold    },
-  //   { text: 'fonts ',   font: italic  },
-  //   { text: 'and styles', font: bold  },
-  // ];
-
-  // let x = 0;
-  // const pathPieces = runs.map(run => {
-  //   // measure width so we know how far to advance x
-  //   const { width } = run.font.getMetrics(fontSize);
-
-  //   // getPath returns the raw “d=” string for that run,
-  //   // positioned at (x, baseline)
-  //   const d = run.font.getPath(run.text, { x, y: baseline, fontSize });
-
-  //   x += width;   // move over for the next run
-  //   return d;
-  // });
-
-  // // 3) stitch them all together & wrap in one <path>
-  // const combinedD = pathPieces.join(' ');
+  const combinedD = pathPieces.join(" ");
+  //Debugging output
   // const svg = `<?xml version="1.0"?>
   // <svg xmlns="http://www.w3.org/2000/svg">
-  //   <path d="${combinedD}" fill="#000" />
+  //   <path d="${combinedD}" fill="#000000" />
   // </svg>`;
-
-  // fs.writeFileSync('out.svg', svg, 'utf8');
-  // console.log('✅ out.svg written');
+  // fs.writeFileSync("out.svg", svg, "utf8");
+  // console.log("✅ out.svg written");
+  //
+  return combinedD;
 }
 
+// #endregion SVG Writing
 const xmlString = `
 
 <text style="italic">this <text style="bold">WOW</text> is italic</text>
 `;
 
 const xmlString3 = `
-<text> hit </text>
-<text style="bold">this is bold</text>
-<text style="italic">this is italic</text>
+<text style="bold" fontSize="32">LeoMEMS™ Reading</text>
 `;
 loadFonts();
-const parsedXML = parseXML(xmlString3);
+const parsedXML = parseTextXML(xmlString);
+const outputPathsvg = getSVGPath(parsedXML);
+// console.log(parsedXML);
 // dumpToJSON(parsedXML, "parsedXML.json");
-console.log(parsedXML);
+// console.log(outputPathsvg);
 
-// module.exports = { writeTextToSVGTest, loadFonts };
+module.exports = { loadFonts };
