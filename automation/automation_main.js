@@ -1,6 +1,6 @@
 const { chromium, firefox } = require("playwright");
-const { scanReplace } = require("./scanReplace");
-const { svgReplace, injectSVGCapture } = require("./svgReplace");
+const { runScanner } = require("./scanner.js");
+const { svgReplace, injectSVGCapture } = require("./svgReplace.js");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
@@ -64,7 +64,7 @@ async function init() {
 //   await page.goto("https://jitter.video/file/?id=JcmdWafAfhKG21eEFQSryysG");
 // }
 async function runScanReplace() {
-  await scanReplace();
+  await runScanner();
 }
 
 async function runSVGReplace() {

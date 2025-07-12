@@ -19,7 +19,7 @@ const locators = {
   textSVG: 'path[d^="M5 6V4H19V8H17V6H13V18H15V20H13H11H9V"]',
 };
 
-async function scanReplace() {
+async function runScanner() {
   initDicionaries();
   //Get selected Element
   let selectedElement = await page
@@ -181,4 +181,4 @@ async function GetPaddingInlineStart(locator) {
   );
 }
 
-module.exports = { scanReplace };
+module.exports = { runScanner };
