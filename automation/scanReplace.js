@@ -1,6 +1,7 @@
 const { TIMEOUT } = require("dns");
 const { chromium } = require("playwright");
 const { text } = require("stream/consumers");
+const { OnStart } = require("./svgReplace");
 
 ///class: layerList-module--chevron
 //padding-inline-start in .layerList-module--layer--1eb2e
@@ -19,6 +20,7 @@ const locators = {
 };
 
 async function scanReplace() {
+  OnStart();
   //Get selected Element
   let selectedElement = await page
     .locator(`.${locators.parentSelectedClass}`)

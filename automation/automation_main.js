@@ -1,6 +1,6 @@
 const { chromium, firefox } = require("playwright");
 const { scanReplace } = require("./scanReplace");
-const { svgReplace } = require("./svgReplace");
+const { svgReplace, OnBeforePageLoad } = require("./svgReplace");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
@@ -27,6 +27,7 @@ async function init() {
   });
 
   global.page = await browser.newPage();
+  OnBeforePageLoad();
   await page.goto("https://jitter.video/file/?id=TUHiwDO4kF1b3GI15P82XBNR");
 }
 

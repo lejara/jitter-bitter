@@ -15,6 +15,70 @@ const textDataPath = path.join(
   `../Jitter-Bitter-Gitter/export/textData.json`
 );
 const svgFuzzyMatchPath = path.join(__dirname, "../python/svgFuzzyMatch.py");
+const dataDics = {
+  jitterSVGDataDictionary: {},
+  figmaDataDictionary: {},
+};
+async function OnBeforePageLoad() {
+  await injectSVGCapture();
+}
+
+async function OnStart() {
+  // Setup svg data dictionary
+  dataDics.jitterSVGDataDictionary = await page.evaluate(async () => {
+    let dataDic = {};
+    //Note: window.svgsJB is the data we pulled during page load
+    const pulledData = window.svgsJB;
+    for (const key in pulledData) {
+      const url = pulledData[key];
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const svgString = await blob.text();
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgString, "image/svg+xml");
+
+      dataDic[key] = {
+        layerId: key,
+        blobUrl: url,
+        hashes: [],
+        normalizedPaths: [],
+        svg: svgString,
+        pathArray: Array.from(doc.querySelectorAll("path"))
+          .map((pathEl) => pathEl.getAttribute("d"))
+          .filter((d) => d !== null),
+      };
+    }
+    return dataDic;
+  });
+
+  for (const key in dataDics.jitterSVGDataDictionary) {
+    const paths = dataDics.jitterSVGDataDictionary[key].pathArray;
+    const normalizedPaths = await Promise.all(
+      paths.map((path) => canonicalizePath(path))
+    );
+    const hashes = await Promise.all(normalizedPaths.map((path) => hash(path)));
+    dataDics.jitterSVGDataDictionary[key].hashes = hashes;
+    dataDics.jitterSVGDataDictionary[key].normalizedPaths = normalizedPaths;
+  }
+  dumpToJSON(dataDics.jitterSVGDataDictionary, "jitterSVGDataDictionary.json");
+  // Process Figma textData.json
+  //Build hash table for svg paths in text Data
+  const figmaTextData = JSON.parse(fs.readFileSync(textDataPath, "utf-8"));
+  //Note: the key are the same layer ids in figma.
+  for (const key in figmaTextData) {
+    let path = figmaTextData[key].svg.path;
+    path = canonicalizePath(path);
+    dataDics.figmaDataDictionary[key] = {
+      text: figmaTextData[key].text,
+      hash: await hash(path),
+      normalizedPath: path,
+    };
+  }
+  dumpToJSON(dataDics.figmaDataDictionary, "figmaDataDictionary.json");
+}
+
+function tryToReplace() {}
 
 async function svgReplace() {
   console.log("Starting scanReplace...");
@@ -57,6 +121,7 @@ async function svgPathTest() {
       const doc = parser.parseFromString(svgString, "image/svg+xml");
 
       jitterSVGDataDictionary[key] = {
+        layerId: key,
         hashes: [],
         blobUrl: url,
         normalizedPaths: [],
@@ -326,4 +391,4 @@ function svgFuzzyEqual(d1, d2, { tol = 0.02, samples = 500 } = {}) {
   });
 }
 
-module.exports = { svgReplace };
+module.exports = { svgReplace, OnBeforePageLoad, OnStart };
