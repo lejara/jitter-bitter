@@ -1,3 +1,4 @@
+const { TIMEOUT } = require("dns");
 const { chromium } = require("playwright");
 const { text } = require("stream/consumers");
 
@@ -47,10 +48,20 @@ async function scanReplace() {
 
   //Scan childern elemets
   let ctr = startingIndex + 1;
+  const layerListContainer = page.locator(`[data-testid="${"layer-list"}"]`);
   while (true) {
-    let element = await page.locator(`[data-index="${ctr}"] > *:first-child`, {
-      hasText: undefined,
-    }); //TODO: try searching in the continer instead of the whole page
+    const layerSelector = `[data-index="${ctr}"] > *:first-child`;
+    let element = null;
+    try {
+      await page.waitForSelector(layerSelector, {
+        timeout: 200,
+      });
+      element = await layerListContainer.locator(layerSelector, {
+        hasText: undefined,
+      });
+    } catch (error) {
+      break;
+    }
 
     const computedPaddingStart = await element.evaluate((node) => {
       node.scrollIntoView({ behavior: "instant", block: "center" });
@@ -58,7 +69,6 @@ async function scanReplace() {
         getComputedStyle(node).getPropertyValue("padding-inline-start")
       );
     });
-
     if (computedPaddingStart <= selectedElementPadding) {
       break;
     }
@@ -67,15 +77,10 @@ async function scanReplace() {
     const textSVG = await element.locator(locators.textSVG);
 
     if ((await textSVG.count()) > 0) {
-      console.log("Text SVG found");
-      await changeText(element);
+      console.log("Text found");
+      // await changeText(element);
     }
-    // await element.click();
 
-    // const className = await element.getAttribute("class");
-    // console.log(
-    //   `Element ${ctr} class: ${className} inline-start: ${computedPaddingStart}`
-    // );
     console.log(ctr);
     ctr++;
   }
