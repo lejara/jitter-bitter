@@ -6,8 +6,9 @@ const { spawn } = require("child_process");
 const parsepathData = require("svg-parse-path-normalized");
 const pLimit = require("p-limit");
 const { parsePathDataNormalized, pathDataToD } = parsepathData;
-const { writeTextToSVGTest, loadFonts } = require("./svgWrite");
+const { loadFonts } = require("./svgWrite");
 const { load } = require("text-to-svg");
+const { dumpToJSON, sleep } = require("./jb-utils");
 
 const textDataPath = path.join(
   __dirname,
@@ -27,7 +28,7 @@ async function svgReplace() {
   // await fileChooser.setFiles("/absolute/path/to/your/file.png");
   //text-to-svg
   //   console.log(page);
-  // await writeTextToSVGTest();
+
   loadFonts();
 }
 
@@ -269,22 +270,6 @@ function replaceJSToSVGCapture(body) {
 }
 
 //Utils
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function dumpToJSON(data, fileName = "dump.json") {
-  const outPath = path.join(__dirname, `../dumps/${fileName}`);
-  fs.writeFileSync(
-    outPath,
-    JSON.stringify(
-      data,
-      (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-      2
-    ),
-    "utf-8"
-  );
-}
 
 function canonicalizePath(d, precision = 3) {
   // 1. Parse & normalize in one shot
@@ -341,4 +326,4 @@ function svgFuzzyEqual(d1, d2, { tol = 0.02, samples = 500 } = {}) {
   });
 }
 
-module.exports = { svgReplace, dumpToJSON };
+module.exports = { svgReplace };

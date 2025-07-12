@@ -174,23 +174,4 @@ async function GetPaddingInlineStart(locator) {
   );
 }
 
-async function printDOM(locator) {
-  const domContent = await locator.evaluate((node) => node.outerHTML);
-  console.log(domContent);
-}
-
-async function debugPrintChildValues(locatorElement) {
-  //
-  const parent = locatorElement;
-  const children = parent.locator(":scope > *"); // all direct children
-
-  const ccount = await children.count();
-  for (let i = 0; i < ccount; i++) {
-    const text = await children.nth(i).textContent();
-    console.log(`Child ${i}:`, text);
-  }
-
-  ///
-}
-
 module.exports = { scanReplace };

@@ -2,7 +2,7 @@ const TextToSVG = require("text-to-svg");
 const path = require("path");
 const fs = require("fs");
 const { XMLParser } = require("fast-xml-parser");
-const { dumpToJSON } = require("./svgReplace");
+const { dumpToJSON } = require("./jb-utils");
 
 //Figma scan
 // [
@@ -270,19 +270,19 @@ function getSVGPath(runs) {
 }
 
 // #endregion SVG Writing
-const xmlString = `
+// const xmlString = `
 
-<text style="italic">this <text style="bold">WOW</text> is italic</text>
-`;
+// <text style="italic">this <text style="bold">WOW</text> is italic</text>
+// `;
 
-const xmlString3 = `
-<text style="bold" fontSize="32">LeoMEMS™ Reading</text>
-`;
-loadFonts();
-const parsedXML = parseTextXML(xmlString);
-const outputPathsvg = getSVGPath(parsedXML);
-// console.log(parsedXML);
-// dumpToJSON(parsedXML, "parsedXML.json");
-// console.log(outputPathsvg);
+// const xmlString3 = `
+// <text style="bold" fontSize="32">LeoMEMS™ Reading</text>
+// `;
+// loadFonts();
+// const parsedXML = parseTextXML(xmlString);
+// const outputPathsvg = getSVGPath(parsedXML);
+// // console.log(parsedXML);
+// // dumpToJSON(parsedXML, "parsedXML.json");
+// // console.log(outputPathsvg);
 
 module.exports = { loadFonts };
