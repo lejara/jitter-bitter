@@ -20,27 +20,45 @@ def get_path_bbox(path):
     return min(xs), min(ys), max(xs), max(ys)
 
 
+# def scale_and_translate_path(replacement_path, target_bbox):
+#     # target_bbox = (tx0, ty0, tx1, ty1)
+#     rx0, ry0, rx1, ry1 = get_path_bbox(replacement_path)
+#     tx0, ty0, tx1, ty1 = target_bbox
+
+#     # compute dimensions
+#     rw, rh = rx1 - rx0, ry1 - ry0
+#     tw, th = tx1 - tx0, ty1 - ty0
+
+#     # **Scale to fill** the target box (may overflow)
+#     scale = max(tw / rw, th / rh)
+
+#     # scale and then re-compute bbox
+#     scaled = replacement_path.scaled(scale)
+#     sx0, sy0, _, _ = get_path_bbox(scaled)
+
+#     # translate so top-left corners align
+#     dx = tx0 - sx0
+#     dy = ty0 - sy0
+#     translated = scaled.translated(complex(dx, dy))
+#     return translated
+
 def scale_and_translate_path(replacement_path, target_bbox):
     # target_bbox = (tx0, ty0, tx1, ty1)
     rx0, ry0, rx1, ry1 = get_path_bbox(replacement_path)
     tx0, ty0, tx1, ty1 = target_bbox
 
-    # compute dimensions
-    rw, rh = rx1 - rx0, ry1 - ry0
-    tw, th = tx1 - tx0, ty1 - ty0
+    # centers of replacement and target boxes
+    rcx = (rx0 + rx1) / 2
+    rcy = (ry0 + ry1) / 2
+    tcx = (tx0 + tx1) / 2
+    tcy = (ty0 + ty1) / 2
 
-    # uniform scale factor to fit
-    scale = min(tw / rw, th / rh)
+    # translation to align centers
+    dx = tcx - rcx
+    dy = tcy - rcy
 
-    # scale and then re-compute bbox
-    scaled = replacement_path.scaled(scale)
-    sx0, sy0, _, _ = get_path_bbox(scaled)
-
-    # translate so top-left corners align
-    dx = tx0 - sx0
-    dy = ty0 - sy0
-    translated = scaled.translated(complex(dx, dy))
-    return translated
+    # only translate, no scaling
+    return replacement_path.translated(complex(dx, dy))
 
 
 def main():
