@@ -1,14 +1,20 @@
 const path = require("path");
 const fs = require("fs");
 
-function dumpPathToSVG(pathD) {
-  const outPath = path.join(__dirname, `../dumps/out.svg`);
+function dumpPathToSVG(pathD, filename = "out") {
+  const outPath = path.join(__dirname, `../dumps/${filename}.svg`);
   const svg = `<?xml version="1.0"?>
   <svg xmlns="http://www.w3.org/2000/svg">
     <path d="${pathD}" fill="#000000" />
   </svg>`;
   fs.writeFileSync(outPath, svg, "utf8");
-  console.log("✅ out.svg written");
+  console.log(`✅ ${filename}.svg written`);
+}
+
+function dumpSVGString(svgString, filename = "out") {
+  const outPath = path.join(__dirname, `../dumps/${filename}.svg`);
+  fs.writeFileSync(outPath, svgString, "utf8");
+  console.log(`✅ ${filename}.svg written`);
 }
 
 function dumpToJSON(data, fileName = "dump.json") {
@@ -48,6 +54,7 @@ async function debugPrintChildValues(locatorElement) {
 }
 
 module.exports = {
+  dumpSVGString,
   dumpPathToSVG,
   dumpToJSON,
   sleep,

@@ -1,6 +1,7 @@
 const { chromium, firefox } = require("playwright");
 const { runScanner } = require("./scanner.js");
 const { svgReplace, injectSVGCapture } = require("./svgReplace.js");
+const { loadFonts } = require("./svgWrite.js");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
@@ -25,7 +26,7 @@ async function init() {
       "--disable-extensions",
     ],
   });
-
+  loadFonts();
   global.page = await browser.newPage();
   await injectSVGCapture();
   await page.goto("https://jitter.video/file/?id=TUHiwDO4kF1b3GI15P82XBNR");

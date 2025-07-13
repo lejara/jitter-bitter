@@ -6,9 +6,15 @@ const { spawn } = require("child_process");
 const parsepathData = require("svg-parse-path-normalized");
 const pLimit = require("p-limit");
 const { parsePathDataNormalized, pathDataToD } = parsepathData;
-const { loadFonts } = require("./svgWrite");
+const {
+  loadFonts,
+  parseTextXML,
+  createTextXML,
+  getSVGPath,
+  correctPathLocation,
+} = require("./svgWrite");
 const { load } = require("text-to-svg");
-const { dumpToJSON, sleep } = require("./jb-utils");
+const { dumpToJSON, sleep, dumpSVGString } = require("./jb-utils");
 
 const textDataPath = path.join(
   __dirname,
@@ -18,6 +24,7 @@ const svgFuzzyMatchPath = path.join(__dirname, "../python/svgFuzzyMatch.py");
 const dataDics = {
   jitterSVGDataDictionary: {},
   figmaDataDictionary: {},
+  figmaTextData: {},
 };
 
 async function initDicionaries() {
@@ -62,6 +69,7 @@ async function initDicionaries() {
   // Process Figma textData.json
   //Build hash table for svg paths in text Data
   const figmaTextData = JSON.parse(fs.readFileSync(textDataPath, "utf-8"));
+  dataDics.figmaTextData = figmaTextData;
   //Note: the key are the same layer ids in figma.
   for (const key in figmaTextData) {
     let path = figmaTextData[key].svg.path;
@@ -75,7 +83,68 @@ async function initDicionaries() {
   dumpToJSON(dataDics.figmaDataDictionary, "figmaDataDictionary.json");
 }
 
-function tryToReplace() {}
+async function tryToReplace(layerId) {
+  const jitterBlobData = dataDics.jitterSVGDataDictionary[layerId];
+
+  if (!jitterBlobData) {
+    return false;
+  }
+  //Check for match between jitter and figma text data
+  for (const figmaLayerKey in dataDics.figmaDataDictionary) {
+    const figmaTextData = dataDics.figmaDataDictionary[figmaLayerKey];
+
+    for (let index = 0; index < jitterBlobData.hashes.length; index++) {
+      const jitterHash = jitterBlobData.hashes[index];
+      // console.log(jitterHash);
+      if (figmaTextData.hash === jitterHash) {
+        //TODO: add check to replace text here
+        //TODO: check if we have an xml already
+
+        if (true) {
+          //Replace the text to our new text
+
+          const xml = createTextXML(
+            "hallo",
+            dataDics.figmaTextData[figmaLayerKey] // Note: we know these two objects share the same keys
+          );
+
+          const originalPath = jitterBlobData.pathArray[index]; // Note: we know this is a parallel array to jitterBlobData.hashes
+          const newPath = await replaceTextOnPath(xml, originalPath);
+
+          //TODO: make sure to replace the svg in jitterBlobData. for future replacements
+          const newSVGString = replacePathInSVGString(
+            jitterBlobData.svg,
+            originalPath,
+            newPath
+          );
+          dataDics.jitterSVGDataDictionary[layerId].svg = newSVGString;
+          dumpSVGString(newSVGString, layerId);
+        }
+        console.log(`Found Match ${figmaTextData.text}`);
+      }
+    }
+  }
+}
+
+async function replaceTextOnPath(xml, originalPath) {
+  const parsedXML = parseTextXML(xml);
+  const { path } = await correctPathLocation(
+    originalPath,
+    getSVGPath(parsedXML)
+  );
+  return path;
+}
+
+function replacePathInSVGString(svgString, oldD, newD) {
+  const oldDEsc = escapeForRegExp(oldD);
+  // Matches: <path … d="<oldD>" …>
+  const re = new RegExp(`(<path\\b[^>]*\\sd=")${oldDEsc}(")`, "g");
+  return svgString.replace(re, `$1${newD}$2`);
+}
+
+function escapeForRegExp(str) {
+  return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+}
 
 async function svgReplace() {
   console.log("Starting scanReplace...");
@@ -388,4 +457,9 @@ function svgFuzzyEqual(d1, d2, { tol = 0.02, samples = 500 } = {}) {
   });
 }
 
-module.exports = { svgReplace, injectSVGCapture, initDicionaries };
+module.exports = {
+  svgReplace,
+  injectSVGCapture,
+  initDicionaries,
+  tryToReplace,
+};

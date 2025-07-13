@@ -1,14 +1,13 @@
-const { TIMEOUT } = require("dns");
 const { chromium } = require("playwright");
 const { text } = require("stream/consumers");
-const { initDicionaries } = require("./svgReplace");
+const { initDicionaries, tryToReplace } = require("./svgReplace");
+const { isTextField } = require("./textReplace");
+const { randomUUID } = require("crypto");
 
 ///class: layerList-module--chevron
 //padding-inline-start in .layerList-module--layer--1eb2e
 
 const enterCount = 100;
-const parentSelectedID = "parent-frame-333"; //TODO: make this dynamic
-const supportedFonts = ["SF Pro"];
 
 const locators = {
   parentSelectedClass: "layerList-module--selected--54ce4",
@@ -29,9 +28,13 @@ async function runScanner() {
   if (!selectedElement) {
     return console.error("No selected element found");
   }
-
-  await selectedElement.evaluate((node, newId) => {
+  const parentSelectedID = `parent-frame-${randomUUID()}`;
+  const { layerToSVGs } = await selectedElement.evaluate((node, newId) => {
+    //Add an id for later use
     node.id = newId;
+    //While we are at it lets get all the window.svgsJB
+    //Note: window.svgsJB is the data we pulled during page load
+    return { layerToSVGs: window.svgsJB };
   }, parentSelectedID);
 
   for (let i = 0; i < enterCount; i++) {
@@ -52,21 +55,24 @@ async function runScanner() {
   let ctr = startingIndex + 1;
   const layerListContainer = page.locator(`[data-testid="${"layer-list"}"]`);
   while (true) {
+    console.log(ctr);
+
     const layerSelector = `[data-index="${ctr}"] > *:first-child`;
-    let element = null;
+    let layerElement = null;
     try {
       await page.waitForSelector(layerSelector, {
         timeout: 200,
       });
-      element = await layerListContainer.locator(layerSelector, {
+      layerElement = await layerListContainer.locator(layerSelector, {
         hasText: undefined,
       });
     } catch (error) {
       break;
     }
 
-    const computedPaddingStart = await element.evaluate((node) => {
+    const computedPaddingStart = await layerElement.evaluate((node) => {
       node.scrollIntoView({ behavior: "instant", block: "center" });
+
       return parseFloat(
         getComputedStyle(node).getPropertyValue("padding-inline-start")
       );
@@ -75,15 +81,19 @@ async function runScanner() {
       break;
     }
 
-    //Check if is text
-    const textSVG = await element.locator(locators.textSVG);
+    const textSVG = await layerElement.locator(locators.textSVG);
 
     if ((await textSVG.count()) > 0) {
       console.log("Text found");
       // await changeText(element);
+    } else {
+      const layerId = await layerElement.getAttribute("data-id");
+      if (layerToSVGs[layerId]) {
+        console.log("Converted SVG Found");
+        await tryToReplace(layerId);
+      }
     }
 
-    console.log(ctr);
     ctr++;
   }
   console.log(`Scan Done: ${ctr}`);
@@ -124,55 +134,6 @@ async function runScanner() {
   //     locators: locators,
   //   }
   // );
-}
-
-async function changeText(textButton) {
-  await textButton.click();
-  await fixMissingFont();
-  await textButton.press("Enter");
-  await page.keyboard.press("Backspace");
-  await page.keyboard.insertText("Hello, world!");
-  console.log("Text Replaced");
-}
-
-//Note: must be called when an item list is clicked
-async function fixMissingFont() {
-  const missingFonDiv = await page.locator(`[${locators.missingFontDataAtt}]`);
-  if ((await missingFonDiv.count()) > 0) {
-    //Font is Missing
-    const fontName = await missingFonDiv //TODO: fix this make it actually search the  list
-      .locator(`.${locators.missingFontNameClass}`)
-      .last()
-      .innerText();
-
-    const isFontSupoorted = supportedFonts.find((font) => font === fontName);
-    if (!isFontSupoorted) {
-      console.log(`Font is not supported: ${fontName}`);
-      return;
-    }
-
-    await missingFonDiv.locator(`button`).click();
-    ctr = 1;
-    while (ctr < 100) {
-      const fontOption = await page.locator(
-        '[id^="downshift-"][id$="-item-' + ctr + '"]'
-      );
-      const optionName = await fontOption
-        .locator(`[data-sentry-element="Ellipsis"]`)
-        .innerText();
-
-      if (optionName == fontName) {
-        await fontOption.click();
-        console.log(`Font fixed: ${fontName}`);
-        break;
-      }
-      ctr++;
-    }
-
-    if (ctr >= 100) {
-      console.log(`Font not found in options: ${fontName}`);
-    }
-  }
 }
 
 async function GetPaddingInlineStart(locator) {

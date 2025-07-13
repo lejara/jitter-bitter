@@ -148,8 +148,8 @@ function getFallbackFont(style = "Regular") {
 }
 // #endregion
 // #region XML Parser
-function createTextXML(name, attributes = {}, text = "") {
-  const node = { [name]: {} };
+function createTextXML(text, textData) {
+  return `<text fontSize="${textData.fontSize}" font="${textData.fontName.family}" style="${textData.fontName.style}"> ${text} </text>`;
 }
 
 function parseTextXML(xmlString) {
