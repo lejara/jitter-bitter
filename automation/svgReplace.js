@@ -33,23 +33,21 @@ const textDataPath = path.join(
 const svgFuzzyMatchPath = path.join(__dirname, "../python/svgFuzzyMatch.py");
 const dataDics = {
   jitterSVGDataDictionary: {},
-  figmaDataDictionary: {},
-  figmaTextData: {},
+  figmaDataDictionary: {}, //Data we parsed from textData.json
+  figmaTextData: {}, // The textData.json. both are linked by figma layer id.
   svgReplacements: {
-    layerid: {
-      svgHash: "",
+    UUID: {
+      originalSVGHash: "", // svgHash is the original hash of the jitter svg
       toLang: "",
-      // originalSVG: "",
-      // editedSVG: "",
-      editedSvgFile: "",
-      // pathReplacements: [],
-      // originalPaths: [],
-      pathsHashesEdited: [], //Holds originalPaths hashes
-      // parseXMLs: [],
+      // figmaKey: "",
+      linkedLayersID: [],
+      svg: "",
+      fileName: "",
+      originalPathsHashes: [],
     },
   },
   // userEdits: {
-  //   "layerID": {
+  //   "UUID": {
   //     useForOtherLangs: true,
   //     paths: {
   //       originalPathHash: {
@@ -119,8 +117,12 @@ async function initDicionaries() {
   dumpToJSON(dataDics.figmaDataDictionary, "figmaDataDictionary.json");
 
   //load replacement entries
-  const svgReObj = require(getSaveDataPath("svgReplacements.json"));
-  dataDics.svgReplacements = svgReObj;
+  try {
+    const svgReObj = require(getSaveDataPath("svgReplacements.json"));
+    dataDics.svgReplacements = svgReObj;
+  } catch (e) {
+    dataDics.svgReplacements = {};
+  }
 }
 
 async function tryToReplace(layerId, layerElement) {
@@ -129,92 +131,132 @@ async function tryToReplace(layerId, layerElement) {
   if (!jitterBlobData) {
     return false;
   }
-  //Check for match between jitter and figma text data
+  //1. first check if we have a figma match of a path
+
+  let matchingPaths = false;
+  const toReplace = []; // We can have many paths to replace in a single svg
   for (const figmaLayerKey in dataDics.figmaDataDictionary) {
-    const figmaTextData = dataDics.figmaDataDictionary[figmaLayerKey];
+    const figmaDataDic = dataDics.figmaDataDictionary[figmaLayerKey];
 
     for (let index = 0; index < jitterBlobData.hashes.length; index++) {
-      const jitterHash = jitterBlobData.hashes[index];
-
-      //frist check if we have a replacement
-
-      if (figmaTextData.hash === jitterHash) {
-        console.log("hash found");
-        //check if we should edit the svg. based on csv data
-        if (true) {
-          //find existing replacement flags
-          const existingReplacementEntry = dataDics.svgReplacements.find(
-            (replacementEntry) =>
-              replacementEntry.svgHash === jitterBlobData.svgHash
-          );
-          let pathHasBeenEdited,
-            langMatch = false;
-          if (existingReplacementEntry) {
-            //check if the path we are are on has already been edited
-            pathHasBeenEdited = existingReplacementEntry.pathsHashesEdited.find(
-              (hash) => hash === jitterHash
-            );
-            //TODO: add lang check here too
-            langMatch = true;
-          }
-
-          //
-          console.log(existingReplacementEntry);
-          console.log(pathHasBeenEdited);
-          //
-
-          if (existingReplacementEntry && pathHasBeenEdited && langMatch) {
-            //Reuse SVG
-            console.log("Reused Replacement " + existingReplacementEntry.id);
-            replaceSVG(existingReplacementEntry, layerElement);
-          } else {
-            //Create our new text path
-            const xml = createTextXML(
-              "Hallo",
-              dataDics.figmaTextData[figmaLayerKey] // Note: we know these two objects share the same keys
-            );
-
-            const originalPath = jitterBlobData.pathArray[index]; // Note: we know this is a parallel array to jitterBlobData.hashes
-            const newPath = await replaceTextOnPath(xml, originalPath);
-
-            const newSVGString = replacePathInSVGString(
-              jitterBlobData.svg,
-              originalPath,
-              newPath
-            );
-            dataDics.jitterSVGDataDictionary[layerId].svg = newSVGString;
-
-            //Write a new svg file
-
-            let svgFileName;
-            let replacementEntry = {};
-            if (existingReplacementEntry && langMatch) {
-              //Update replacement entry
-              //we def know the pathHashes has not been edited
-              existingReplacementEntry.pathsHashesEdited.push(jitterHash);
-              svgFileName = existingReplacementEntry.editedSvgFile;
-              replacementEntry = existingReplacementEntry;
-              console.log("Updated Replacement " + existingReplacementEntry.id);
-            } else {
-              //Make a new replacement entry
-              svgFileName = layerId;
-              replacementEntry = {
-                id: randomUUID(),
-                svgHash: jitterBlobData.svgHash,
-                toLang: "some lang",
-                editedSvgFile: svgFileName,
-                pathsHashesEdited: [jitterHash],
-              };
-              console.log("Created Replacement " + replacementEntry.id);
-            }
-            saveSVGString(newSVGString, svgFileName);
-            await replaceSVG(replacementEntry, layerElement);
-            updateReplacementEntires(replacementEntry);
-          }
-        }
-        console.log(`Found Match ${figmaTextData.text}`);
-        break;
+      const jitterHash = jitterBlobData.hashes[index]; //THis hash will always change. depending if we edited the svg.
+      if (figmaDataDic.hash === jitterHash) {
+        matchingPaths = true;
+        toReplace.push({
+          figmaDataDic,
+          figmaTextData: dataDics.figmaTextData[figmaLayerKey],
+          jitterHash,
+          jitterHashIndex: index,
+        });
       }
+    }
+  }
+
+  //2. Check if we already edited the layer
+  let existingReplacementEntry; // means, did we edit this layer before?
+  let existingReplacementEntryUUID;
+  for (const uuid in dataDics.svgReplacements) {
+    const entry = dataDics.svgReplacements[uuid];
+    const found = entry.linkedLayersID.find((l) => l === layerId);
+    if (found) {
+      existingReplacementEntryUUID = uuid;
+      existingReplacementEntry = entry;
+      break;
+    }
+  }
+  //NOTE: matchingPaths will only be true if the paths are not edited and can be replaced. True == unedited
+
+  //2.1 We edited this layer before and theres no new edits to be done.
+  if (existingReplacementEntry && !matchingPaths) {
+    //TODO: here is where we apply user updates
+    console.log("Found Replacement SVG. Skipping..");
+    return;
+  }
+  //3. We return here. since we only replace paths that can be edited.
+  else if (!matchingPaths) {
+    console.log("Found no paths to replace. Skipping...");
+    return;
+  }
+
+  //--This is now a path or many we didn't touch. That matches with a figma text and could be replaced--
+
+  //4. Check if we can reuse another svgReplacement entry. if we never touched this layer before. (for dups svgs)
+  if (!existingReplacementEntry) {
+    for (const uuid in dataDics.svgReplacements) {
+      const entry = dataDics.svgReplacements[uuid];
+      //TODO: add toLang check here
+      if (entry.originalSVGHash == jitterBlobData.svgHash) {
+        const reusedReplacementEntry = entry;
+
+        await replaceSVG(reusedReplacementEntry, layerElement);
+        reusedReplacementEntry.linkedLayersID.push(layerId);
+        updateReplacementEntires(reusedReplacementEntry, uuid);
+        console.log("Found a dup svg. Reusing Replacement");
+        //We are done.
+        return;
+      }
+    }
+  }
+
+  //-- Now  we must edit our path. if we can. --
+
+  //5. Go through all our potential paths.
+  for (let ctr = 0; ctr < toReplace.length; ctr++) {
+    const replaceData = toReplace[ctr];
+    //6. Check if we can translate the text. TODO: add csv check here.
+    if (true) {
+      //-- WE CAN! YAY! lets get to editing ---
+      //6.1 Translate it and correct it
+      const xml = createTextXML("Hallo", replaceData.figmaTextData);
+      const originalPath =
+        jitterBlobData.pathArray[replaceData.jitterHashIndex]; //Note: the array of pathArray and the hash index are parallel
+      const newPath = await replaceTextOnPath(xml, originalPath);
+
+      let existingSVGString = existingReplacementEntry
+        ? existingReplacementEntry.svg
+        : jitterBlobData.svg;
+      //6.2 Replace our new path data to the old path
+      const newSVGString = replacePathInSVGString(
+        existingSVGString,
+        originalPath,
+        newPath
+      );
+
+      //7. Write a new svg file and either update or add a svgReplacement entry
+      let svgFileName;
+      let replacementEntry = {};
+      if (existingReplacementEntry) {
+        //Update replacement entry
+        existingReplacementEntry.originalPathsHashes.push(
+          replaceData.jitterHash
+        );
+        svgFileName = existingReplacementEntry.fileName;
+        existingReplacementEntry.svg = newSVGString;
+        replacementEntry = existingReplacementEntry;
+        updateReplacementEntires(
+          replacementEntry,
+          existingReplacementEntryUUID
+        );
+        console.log("Updated Replacement");
+      } else {
+        //Make a new replacement entry
+        const newID = randomUUID();
+        svgFileName = newID;
+        replacementEntry = {
+          originalSVGHash: jitterBlobData.svgHash,
+          toLang: "some lang",
+          linkedLayersID: [layerId],
+          svg: newSVGString,
+          // figmaKey:
+          fileName: svgFileName,
+          originalPathsHashes: [replaceData.jitterHash],
+        };
+        existingReplacementEntry = replacementEntry;
+        updateReplacementEntires(replacementEntry, newID);
+        console.log("Created Replacement ");
+      }
+      saveSVGString(newSVGString, svgFileName);
+      await replaceSVG(replacementEntry, layerElement);
     }
   }
 }
@@ -229,23 +271,13 @@ async function replaceSVG(replacementEntry, layerElement) {
     ), // Click the button that opens it
   ]);
   await fileChooser.setFiles(
-    `${getSaveDataPath(replacementEntry.editedSvgFile)}.svg`
+    `${getSaveDataPath(replacementEntry.fileName)}.svg`
   );
 }
 
-function updateReplacementEntires(replacementEntry) {
-  let replaced = false;
-  for (let i = 0; i < dataDics.svgReplacements.length; i++) {
-    const existingReplecmentEntry = dataDics.svgReplacements[i];
-    if (existingReplecmentEntry.id === replacementEntry.id) {
-      dataDics.svgReplacements[i] = replacementEntry;
-      replaced = true;
-      break;
-    }
-  }
-  if (!replaced) {
-    dataDics.svgReplacements.push(replacementEntry);
-  }
+function updateReplacementEntires(replacementEntry, uuid) {
+  dataDics.svgReplacements[uuid] = replacementEntry;
+
   saveToJSON(dataDics.svgReplacements, "svgReplacements.json");
 }
 
