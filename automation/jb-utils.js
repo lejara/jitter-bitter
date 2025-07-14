@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const xxhash = require("xxhash-wasm");
 
 function dumpPathToSVG(pathD, filename = "out") {
   const outPath = path.join(__dirname, `../dumps/${filename}.svg`);
@@ -15,6 +16,38 @@ function dumpSVGString(svgString, filename = "out") {
   const outPath = path.join(__dirname, `../dumps/${filename}.svg`);
   fs.writeFileSync(outPath, svgString, "utf8");
   console.log(`✅ ${filename}.svg written`);
+}
+
+function saveSVGString(svgString, filename = "out") {
+  const outPath = getSaveDataPath(`${filename}.svg`);
+  fs.writeFileSync(outPath, svgString, "utf8");
+  console.log(`✅ ${filename}.svg written`);
+}
+
+function saveToJSON(data, fileName = "dump.json") {
+  const outPath = path.join(__dirname, `../saveData/${fileName}`);
+  fs.writeFileSync(
+    outPath,
+    JSON.stringify(
+      data,
+      (_key, value) => (typeof value === "bigint" ? value.toString() : value),
+      2
+    ),
+    "utf-8"
+  );
+}
+
+function getSaveDataPath(fileName) {
+  return path.join(__dirname, `../saveData/${fileName}`);
+}
+
+async function hash(data) {
+  const { h64 } = await xxhash();
+  return h64(data);
+}
+
+function combineHashes(hashes = []) {
+  return hashes.reduce((acc, h) => acc ^ h, 0n);
 }
 
 function dumpToJSON(data, fileName = "dump.json") {
@@ -54,10 +87,15 @@ async function debugPrintChildValues(locatorElement) {
 }
 
 module.exports = {
+  combineHashes,
+  hash,
   dumpSVGString,
+  saveSVGString,
+  saveToJSON,
   dumpPathToSVG,
   dumpToJSON,
   sleep,
   printDOM,
   debugPrintChildValues,
+  getSaveDataPath,
 };

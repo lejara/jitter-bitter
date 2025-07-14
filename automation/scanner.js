@@ -61,7 +61,7 @@ async function runScanner() {
     let layerElement = null;
     try {
       await page.waitForSelector(layerSelector, {
-        timeout: 200,
+        timeout: 2000,
       });
       layerElement = await layerListContainer.locator(layerSelector, {
         hasText: undefined,
@@ -90,7 +90,7 @@ async function runScanner() {
       const layerId = await layerElement.getAttribute("data-id");
       if (layerToSVGs[layerId]) {
         console.log("Converted SVG Found");
-        await tryToReplace(layerId);
+        await tryToReplace(layerId, layerElement);
       }
     }
 
