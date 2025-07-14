@@ -1,7 +1,6 @@
 const { chromium } = require("playwright");
 const path = require("path");
 const fs = require("fs");
-const xxhash = require("xxhash-wasm");
 const { spawn } = require("child_process");
 const parsepathData = require("svg-parse-path-normalized");
 const pLimit = require("p-limit");
@@ -14,7 +13,18 @@ const {
   correctPathLocation,
 } = require("./svgWrite");
 const { load } = require("text-to-svg");
-const { dumpToJSON, sleep, dumpSVGString } = require("./jb-utils");
+const {
+  saveToJSON,
+  getSaveDataPath,
+  dumpToJSON,
+  sleep,
+  dumpSVGString,
+  dumpPathToSVG,
+  saveSVGString,
+  hash,
+  combineHashes,
+} = require("./jb-utils");
+const { randomUUID } = require("crypto");
 
 const textDataPath = path.join(
   __dirname,
@@ -25,6 +35,30 @@ const dataDics = {
   jitterSVGDataDictionary: {},
   figmaDataDictionary: {},
   figmaTextData: {},
+  svgReplacements: {
+    layerid: {
+      svgHash: "",
+      toLang: "",
+      // originalSVG: "",
+      // editedSVG: "",
+      editedSvgFile: "",
+      // pathReplacements: [],
+      // originalPaths: [],
+      pathsHashesEdited: [], //Holds originalPaths hashes
+      // parseXMLs: [],
+    },
+  },
+  // userEdits: {
+  //   "layerID": {
+  //     useForOtherLangs: true,
+  //     paths: {
+  //       originalPathHash: {
+  //         textXML: "",
+  //         correctionOptions: "",
+  //       },
+  //     },
+  //   },
+  // },
 };
 
 async function initDicionaries() {
@@ -45,6 +79,7 @@ async function initDicionaries() {
       dataDic[key] = {
         layerId: key,
         blobUrl: url,
+        svgHash: 0,
         hashes: [],
         normalizedPaths: [],
         svg: svgString,
@@ -63,6 +98,7 @@ async function initDicionaries() {
     );
     const hashes = await Promise.all(normalizedPaths.map((path) => hash(path)));
     dataDics.jitterSVGDataDictionary[key].hashes = hashes;
+    dataDics.jitterSVGDataDictionary[key].svgHash = combineHashes(hashes);
     dataDics.jitterSVGDataDictionary[key].normalizedPaths = normalizedPaths;
   }
   dumpToJSON(dataDics.jitterSVGDataDictionary, "jitterSVGDataDictionary.json");
@@ -81,9 +117,13 @@ async function initDicionaries() {
     };
   }
   dumpToJSON(dataDics.figmaDataDictionary, "figmaDataDictionary.json");
+
+  //load replacement entries
+  const svgReObj = require(getSaveDataPath("svgReplacements.json"));
+  dataDics.svgReplacements = svgReObj;
 }
 
-async function tryToReplace(layerId) {
+async function tryToReplace(layerId, layerElement) {
   const jitterBlobData = dataDics.jitterSVGDataDictionary[layerId];
 
   if (!jitterBlobData) {
@@ -95,43 +135,125 @@ async function tryToReplace(layerId) {
 
     for (let index = 0; index < jitterBlobData.hashes.length; index++) {
       const jitterHash = jitterBlobData.hashes[index];
-      // console.log(jitterHash);
+
+      //frist check if we have a replacement
+
       if (figmaTextData.hash === jitterHash) {
-        //TODO: add check to replace text here
-        //TODO: check if we have an xml already
-
+        console.log("hash found");
+        //check if we should edit the svg. based on csv data
         if (true) {
-          //Replace the text to our new text
-
-          const xml = createTextXML(
-            "hallo",
-            dataDics.figmaTextData[figmaLayerKey] // Note: we know these two objects share the same keys
+          //find existing replacement flags
+          const existingReplacementEntry = dataDics.svgReplacements.find(
+            (replacementEntry) =>
+              replacementEntry.svgHash === jitterBlobData.svgHash
           );
+          let pathHasBeenEdited,
+            langMatch = false;
+          if (existingReplacementEntry) {
+            //check if the path we are are on has already been edited
+            pathHasBeenEdited = existingReplacementEntry.pathsHashesEdited.find(
+              (hash) => hash === jitterHash
+            );
+            //TODO: add lang check here too
+            langMatch = true;
+          }
 
-          const originalPath = jitterBlobData.pathArray[index]; // Note: we know this is a parallel array to jitterBlobData.hashes
-          const newPath = await replaceTextOnPath(xml, originalPath);
+          //
+          console.log(existingReplacementEntry);
+          console.log(pathHasBeenEdited);
+          //
 
-          //TODO: make sure to replace the svg in jitterBlobData. for future replacements
-          const newSVGString = replacePathInSVGString(
-            jitterBlobData.svg,
-            originalPath,
-            newPath
-          );
-          dataDics.jitterSVGDataDictionary[layerId].svg = newSVGString;
-          dumpSVGString(newSVGString, layerId);
+          if (existingReplacementEntry && pathHasBeenEdited && langMatch) {
+            //Reuse SVG
+            console.log("Reused Replacement " + existingReplacementEntry.id);
+            replaceSVG(existingReplacementEntry, layerElement);
+          } else {
+            //Create our new text path
+            const xml = createTextXML(
+              "Hallo",
+              dataDics.figmaTextData[figmaLayerKey] // Note: we know these two objects share the same keys
+            );
+
+            const originalPath = jitterBlobData.pathArray[index]; // Note: we know this is a parallel array to jitterBlobData.hashes
+            const newPath = await replaceTextOnPath(xml, originalPath);
+
+            const newSVGString = replacePathInSVGString(
+              jitterBlobData.svg,
+              originalPath,
+              newPath
+            );
+            dataDics.jitterSVGDataDictionary[layerId].svg = newSVGString;
+
+            //Write a new svg file
+
+            let svgFileName;
+            let replacementEntry = {};
+            if (existingReplacementEntry && langMatch) {
+              //Update replacement entry
+              //we def know the pathHashes has not been edited
+              existingReplacementEntry.pathsHashesEdited.push(jitterHash);
+              svgFileName = existingReplacementEntry.editedSvgFile;
+              replacementEntry = existingReplacementEntry;
+              console.log("Updated Replacement " + existingReplacementEntry.id);
+            } else {
+              //Make a new replacement entry
+              svgFileName = layerId;
+              replacementEntry = {
+                id: randomUUID(),
+                svgHash: jitterBlobData.svgHash,
+                toLang: "some lang",
+                editedSvgFile: svgFileName,
+                pathsHashesEdited: [jitterHash],
+              };
+              console.log("Created Replacement " + replacementEntry.id);
+            }
+            saveSVGString(newSVGString, svgFileName);
+            await replaceSVG(replacementEntry, layerElement);
+            updateReplacementEntires(replacementEntry);
+          }
         }
         console.log(`Found Match ${figmaTextData.text}`);
+        break;
       }
     }
   }
 }
 
+async function replaceSVG(replacementEntry, layerElement) {
+  await layerElement.click();
+  // File chooser Example
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent("filechooser"), // Wait for the file dialog
+    page.click(
+      '.editorInspector-module--button--6872e[data-sentry-source-file="media.tsx"]'
+    ), // Click the button that opens it
+  ]);
+  await fileChooser.setFiles(
+    `${getSaveDataPath(replacementEntry.editedSvgFile)}.svg`
+  );
+}
+
+function updateReplacementEntires(replacementEntry) {
+  let replaced = false;
+  for (let i = 0; i < dataDics.svgReplacements.length; i++) {
+    const existingReplecmentEntry = dataDics.svgReplacements[i];
+    if (existingReplecmentEntry.id === replacementEntry.id) {
+      dataDics.svgReplacements[i] = replacementEntry;
+      replaced = true;
+      break;
+    }
+  }
+  if (!replaced) {
+    dataDics.svgReplacements.push(replacementEntry);
+  }
+  saveToJSON(dataDics.svgReplacements, "svgReplacements.json");
+}
+
 async function replaceTextOnPath(xml, originalPath) {
   const parsedXML = parseTextXML(xml);
-  const { path } = await correctPathLocation(
-    originalPath,
-    getSVGPath(parsedXML)
-  );
+  const svgPath = getSVGPath(parsedXML);
+  // dumpPathToSVG(svgPath, randomUUID());
+  const { path } = await correctPathLocation(originalPath, svgPath);
   return path;
 }
 
@@ -149,13 +271,6 @@ function escapeForRegExp(str) {
 async function svgReplace() {
   console.log("Starting scanReplace...");
 
-  //File chooser Example
-  // const [fileChooser] = await Promise.all([
-  //   page.waitForEvent("filechooser"), // Wait for the file dialog
-  //   page.click("button#uploadButton"), // Click the button that opens it
-  // ]);
-
-  // await fileChooser.setFiles("/absolute/path/to/your/file.png");
   //text-to-svg
   //   console.log(page);
 
@@ -278,11 +393,6 @@ async function svgPathTest() {
   for (const match of matchedSVGs) {
     console.log(`MATCHED Layer ID: ${match.layerId}, SVG URL: ${match.svgUrl}`);
   }
-}
-
-async function hash(data) {
-  const { h64 } = await xxhash();
-  return h64(data);
 }
 
 function createRegexFromSnippet(snippet, flags = "g") {
