@@ -4,7 +4,7 @@ const {
   runScanReplace,
   runSVGReplace,
   init,
-} = require("./automation/automation_main");
+} = require("../../automation/automation_main");
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -17,7 +17,13 @@ async function createWindow() {
     },
   });
 
-  win.loadFile("index.html");
+  // win.loadFile("index.html");
+  console.log(`DEV TYPE ${process.env.NODE_ENV}`);
+  if (process.env.NODE_ENV === "development") {
+    win.loadURL("http://localhost:5173/");
+  } else {
+    win.loadFile(path.join(__dirname, "../../dist/renderer/index.html"));
+  }
 
   await init(); // Initialize Playwright browser
 }
@@ -32,3 +38,7 @@ ipcMain.handle("run-svg-Replace", async () => {
 });
 
 app.whenReady().then(createWindow);
+app.on("window-all-closed", () => {
+  //TODO: whats this?
+  if (process.platform !== "darwin") app.quit();
+});

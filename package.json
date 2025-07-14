@@ -3,8 +3,13 @@
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "node main.js"
+    "start": "electron ./src/main/main.js",
+    "dev:renderer": "vite",
+    "dev:main": "cross-env NODE_ENV=development electron ./src/main/main.js",
+    "dev": "concurrently -k -n RENDERER,MAIN \"npm run dev:renderer\" \"npm run dev:main\"",
+    "build:renderer": "vite build",
+    "build:main": "cross-env NODE_ENV=production electron ./src/main/main.js",
+    "build": "npm run build:renderer && npm run build:main"
   },
   "keywords": [],
   "author": "",
@@ -12,15 +17,21 @@
   "description": "",
   "devDependencies": {
     "@playwright/test": "^1.53.2",
-    "@types/node": "^24.0.8"
+    "@types/node": "^24.0.8",
+    "cross-env": "^7.0.3"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.6.0",
+    "concurrently": "^9.2.0",
     "electron": "^37.1.0",
     "fast-xml-parser": "^5.2.5",
     "p-limit": "^3.1.0",
     "playwright": "^1.53.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "svg-parse-path-normalized": "^1.1.0",
     "text-to-svg": "^3.1.5",
+    "vite": "^7.0.4",
     "xxhash-wasm": "^1.1.0"
   }
 }
