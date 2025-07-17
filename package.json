@@ -17,8 +17,10 @@
   "description": "",
   "devDependencies": {
     "@playwright/test": "^1.53.2",
+    "@tailwindcss/vite": "^4.1.11",
     "@types/node": "^24.0.8",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "tailwindcss": "^4.1.11"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.6.0",
