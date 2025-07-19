@@ -29,7 +29,7 @@ async function init() {
   loadFonts();
   global.page = await browser.newPage();
   await injectSVGCapture();
-  await page.goto("https://jitter.video/file/?id=TUHiwDO4kF1b3GI15P82XBNR");
+  await page.goto("https://jitter.video/file/?id=Zu8mPmRi3Ki4CQtG3ZJuRnkb");
 }
 
 // async function init() {
