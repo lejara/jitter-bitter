@@ -26,44 +26,30 @@ async function init() {
       "--disable-extensions",
     ],
   });
+
   loadFonts();
   global.page = await browser.newPage();
+  await injectCustomURLForExporting();
   await injectSVGCapture();
   await page.goto("https://jitter.video/file/?id=Zu8mPmRi3Ki4CQtG3ZJuRnkb");
 }
 
-// async function init() {
-//   // Use a persistent Firefox profile (custom folder for session)
-//   const userDataDir = path.join(
-//     os.homedir(),
-//     "AppData",
-//     "Roaming",
-//     "Mozilla",
-//     "Firefox",
-//     "Profiles"
-//   );
+async function injectCustomURLForExporting() {
+  browser.on("page", async (newPage) => {
+    await newPage.waitForLoadState("domcontentloaded").catch(() => {});
+    let newUrl = newPage.url();
+    if (
+      newUrl.startsWith("https://jitter.video/export") &&
+      !newUrl.includes("fromWcid=h264HighHwAAC")
+    ) {
+      newUrl = `${newUrl}&fps=30&fromWcid=h264HighHwAAC&fromProfile=mp4&wcid=h264HighHwOpus`;
+      console.log("➜ Rewritten URL:", newUrl);
 
-//   // You can use a specific profile folder, or let Playwright create its own
-//   const profileDir = path.resolve(userDataDir, "firefox-profile");
+      await newPage.goto(newUrl);
+    }
+  });
+}
 
-//   if (!fs.existsSync(profileDir)) {
-//     fs.mkdirSync(profileDir, { recursive: true });
-//   }
-
-//   global.browser = await firefox.launchPersistentContext(profileDir, {
-//     headless: false,
-//     viewport: null,
-//     userAgent:
-//       "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:115.0) Gecko/20100101 Firefox/115.0",
-//     args: [
-//       // Firefox-specific launch arguments (generally fewer than Chrome)
-//       "--no-sandbox",
-//     ],
-//   });
-
-//   page = await browser.newPage();
-//   await page.goto("https://jitter.video/file/?id=JcmdWafAfhKG21eEFQSryysG");
-// }
 async function runScanReplace() {
   await runScanner();
 }
