@@ -6,6 +6,9 @@ const {
   init,
 } = require("../../automation/automation_main");
 
+//ipc handlers
+require("../../automation/find-replace/FR-events");
+
 async function createWindow() {
   const win = new BrowserWindow({
     width: 800,
@@ -29,6 +32,7 @@ async function createWindow() {
 }
 
 // Listen for renderer signal to run script
+
 ipcMain.handle("run-scan-Replace", async () => {
   await runScanReplace();
 });

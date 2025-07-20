@@ -1,4 +1,4 @@
-// const { chromium } = require("playwright");
+const { chromium } = require("playwright");
 // const { text } = require("stream/consumers");
 // const { initDicionaries, tryToReplace } = require("./svgReplace");
 // const { isTextField } = require("./textReplace");
@@ -9,14 +9,14 @@
 
 // const enterCount = 100;
 
-// const locators = {
-//   parentSelectedClass: "layerList-module--selected--54ce4",
-//   childLayerListClass: "layerList-module--parentInSelection",
-//   scrollContainerDataAtt: 'data-sentry-element="EditorPanel"',
-//   missingFontDataAtt: `data-sentry-component="MissingFontInspectorImpl"`,
-//   missingFontNameClass: `text-module--noWrap--78afb`,
-//   textSVG: 'path[d^="M5 6V4H19V8H17V6H13V18H15V20H13H11H9V"]',
-// };
+const locators = {
+  parentSelectedClass: "layerList-module--selected--54ce4",
+  childLayerListClass: "layerList-module--parentInSelection",
+  scrollContainerDataAtt: 'data-sentry-element="EditorPanel"',
+  missingFontDataAtt: `data-sentry-component="MissingFontInspectorImpl"`,
+  missingFontNameClass: `text-module--noWrap--78afb`,
+  textSVG: 'path[d^="M5 6V4H19V8H17V6H13V18H15V20H13H11H9V"]',
+};
 
 // async function runScanner() {
 
@@ -30,4 +30,13 @@
 //   );
 // }
 
-// module.exports = { runScanner };
+async function getSelectedLayer() {
+  return await page.locator(`.${locators.parentSelectedClass}`).first();
+}
+
+//Must be layer!
+async function getLayerID(locator) {
+  return await locator.getAttribute("data-id");
+}
+
+module.exports = { getSelectedLayer, getLayerID };
