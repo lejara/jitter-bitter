@@ -27,8 +27,19 @@ async function init() {
     "Default"
   );
 
-  const chromeExecutable =
-    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
+  // Resolve the two Program Files roots (on Win, these env vars always exist)
+  const programFilesx86 =
+    process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+  const programFiles = process.env["ProgramFiles"] || "C:\\Program Files";
+
+  // Build the two candidate paths
+  const chromeCandidates = [
+    path.join(programFilesx86, "Google", "Chrome", "Application", "chrome.exe"),
+    path.join(programFiles, "Google", "Chrome", "Application", "chrome.exe"),
+  ];
+
+  // Pick the first one that exists
+  const chromeExecutable = chromeCandidates.find((p) => fs.existsSync(p));
 
   if (!fs.existsSync(downloadsFolder))
     fs.mkdirSync(downloadsFolder, { recursive: true });
