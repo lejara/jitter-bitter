@@ -12,7 +12,7 @@ require("../../automation/find-replace/FR-events");
 async function createWindow() {
   const win = new BrowserWindow({
     width: 800,
-    height: 600,
+    height: 800,
     title: "Jitter Bitter",
     webPreferences: {
       preload: path.join(__dirname, "renderer.js"),

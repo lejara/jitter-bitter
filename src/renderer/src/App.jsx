@@ -1,10 +1,11 @@
 import React from "react";
 import "../index.css";
 import AnimationFrameField from "./components/AnimationFrameField";
+import ReferenceFrameList from "./components/ReferenceFrameList";
 
 export default function App() {
   return (
-    <div className=" p-2 flex justify-between flex-col">
+    <div className="p-2 flex justify-around flex-col">
       <div className="flex flex-wrap justify-center ">
         <h1 className="text-5xl font-bold">Jitter Bitter</h1>
         <img
@@ -18,6 +19,10 @@ export default function App() {
       </div>
 
       <AnimationFrameField />
+
+      <div>
+        <ReferenceFrameList />
+      </div>
 
       {/* <button
         className="bg-red-100"
