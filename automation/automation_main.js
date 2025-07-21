@@ -8,11 +8,35 @@ const fs = require("fs");
 
 global.page = null;
 global.browser = null;
+const downloadsFolder = path.join(os.homedir(), "Downloads");
 
 async function init() {
-  const userDataDir =
-    "C:/Users/Lejara/AppData/Local/Google/Chrome/User Data/Default"; //TODO: make this work for anyone
+  // const userDataDir = path.join(
+  //   process.env.LOCALAPPDATA || path.join(process.env.HOME, ".config"),
+  //   "Google/Chrome/User Data"
+  // );
+
+  const localAppData =
+    process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local");
+
+  const userDataDir = path.join(
+    localAppData,
+    "Google",
+    "Chrome",
+    "User Data",
+    "Default"
+  );
+
+  const chromeExecutable =
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
+
+  if (!fs.existsSync(downloadsFolder))
+    fs.mkdirSync(downloadsFolder, { recursive: true });
+
   global.browser = await chromium.launchPersistentContext(userDataDir, {
+    executablePath: chromeExecutable,
+    downloadsPath: downloadsFolder,
+    acceptDownloads: true,
     headless: false,
     viewport: null,
     userAgent:
@@ -27,16 +51,31 @@ async function init() {
     ],
   });
 
+  await global.browser.addInitScript(() => {
+    Object.defineProperty(navigator, "webdriver", {
+      get: () => false,
+    });
+  });
+
   loadFonts();
-  global.page = await browser.newPage();
+  global.page = await global.browser.newPage();
   await injectCustomURLForExporting();
-  await injectSVGCapture();
+
+  // await injectSVGCapture();
   await page.goto("https://jitter.video/file/?id=Zu8mPmRi3Ki4CQtG3ZJuRnkb");
 }
 
 async function injectCustomURLForExporting() {
   browser.on("page", async (newPage) => {
     await newPage.waitForLoadState("domcontentloaded").catch(() => {});
+
+    newPage.on("download", async (download) => {
+      const filename = download.suggestedFilename(); // the real name
+      const savePath = path.join(downloadsFolder, filename);
+      await download.saveAs(savePath); // copy+rename
+      console.log(`✅ Downloaded “${filename}” → ${savePath}`);
+    });
+
     let newUrl = newPage.url();
     if (
       newUrl.startsWith("https://jitter.video/export") &&
