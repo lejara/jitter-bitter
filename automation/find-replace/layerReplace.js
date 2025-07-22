@@ -1,6 +1,7 @@
 const { chromium } = require("playwright");
 
-function init() {}
+async function init() {}
+
 function replaceLayer(id) {}
 
 function copyLayer() {}

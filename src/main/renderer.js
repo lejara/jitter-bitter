@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   //find-replace feature
   getLayerID: () => ipcRenderer.invoke("get-layer-id"),
+  addLink: () => ipcRenderer.invoke("add-link"),
 });

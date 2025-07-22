@@ -86,6 +86,16 @@ async function debugPrintChildValues(locatorElement) {
   ///
 }
 
+function createRegexFromSnippet(snippet, flags = "g") {
+  return new RegExp(
+    snippet
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // escape special chars
+      .replace(/\s+/g, "\\s*") // collapse whitespace
+      .replace(/\\\s/g, "\\s*"), // extra safety
+    flags
+  );
+}
+
 module.exports = {
   combineHashes,
   hash,
@@ -98,4 +108,5 @@ module.exports = {
   printDOM,
   debugPrintChildValues,
   getSaveDataPath,
+  createRegexFromSnippet,
 };

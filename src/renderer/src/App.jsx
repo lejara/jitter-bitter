@@ -2,6 +2,7 @@ import React from "react";
 import "../index.css";
 import AnimationFrameField from "./components/AnimationFrameField";
 import ReferenceFrameList from "./components/ReferenceFrameList";
+import LinkList from "./components/LinkList";
 
 export default function App() {
   return (
@@ -22,6 +23,9 @@ export default function App() {
 
       <div>
         <ReferenceFrameList />
+      </div>
+      <div>
+        <LinkList />
       </div>
 
       {/* <button

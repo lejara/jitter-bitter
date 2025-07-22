@@ -442,6 +442,7 @@ async function injectSVGCapture() {
     const response = await route.fetch();
     let body = await response.text();
     body = replaceJSToSVGCapture(body);
+    // body = injectPrintforTextSVG(body);
 
     const container = ` window.svgsJB = {};`;
     body = container + body;
@@ -514,25 +515,40 @@ function injectConsoleLogForBlob() {
   );
 }
 
-function injectPrintforTextSVG() {
+function injectPrintforTextSVG(body) {
   //Bust code only targets missing font text -> svg
   const regexOrg = createRegexFromSnippet("t && m(t.url) !== o && g(t);");
+  const regexPrintNodeInfo = createRegexFromSnippet(
+    "(await Promise.allSettled(s)).forEach(( (e, n) => {"
+  );
+
+  // body = body.replace(
+  //   regexOrg,
+  //   `
+  //         t && m(t.url) !== o && g(t);
+  //         console.log("Node Id: " +  n);
+  //         console.trace()
+
+  //       `
+  // );
 
   body = body.replace(
-    regexOrg,
+    regexPrintNodeInfo,
     `
-          t && m(t.url) !== o && g(t);
-          console.log("Node Id: " +  n);
+          (await Promise.allSettled(s)).forEach(( (e, n) => {
+          console.log(s[n]);
         `
   );
 
-  const promReturnRegex =
-    /const\s+a\s*=\s*i\.textImgPromise\.then\(\(e=>void 0===e\?\(h\.delete\(o\),\{actions:\[\{type:"updateObj",objId:n,data:\{_assetsStatus:"missing"\}\}\]\}\):\{actions:\[\{type:"updateObj",objId:n,data:\{_image:e,_assetsStatus:"ready"\}\}\]\}\)\);/;
+  // const promReturnRegex =
+  //   /const\s+a\s*=\s*i\.textImgPromise\.then\(\(e=>void 0===e\?\(h\.delete\(o\),\{actions:\[\{type:"updateObj",objId:n,data:\{_assetsStatus:"missing"\}\}\]\}\):\{actions:\[\{type:"updateObj",objId:n,data:\{_image:e,_assetsStatus:"ready"\}\}\]\}\)\);/;
 
-  body = body.replace(
-    promReturnRegex,
-    `const a=i.textImgPromise.then((e=>void 0===e?(h.delete(o),{actions:[{type:"updateObj",objId:n,data:{_assetsStatus:"missing"}}]}):(console.log("[✅ image ready]", { objId: n, currentSrc: e?.currentSrc }),{actions:[{type:"updateObj",objId:n,data:{_image:e,_assetsStatus:"ready"}}]})));`
-  );
+  // body = body.replace(
+  //   promReturnRegex,
+  //   `const a=i.textImgPromise.then((e=>void 0===e?(h.delete(o),{actions:[{type:"updateObj",objId:n,data:{_assetsStatus:"missing"}}]}):(console.log("[✅ image ready]", { objId: n, currentSrc: e?.currentSrc }),{actions:[{type:"updateObj",objId:n,data:{_image:e,_assetsStatus:"ready"}}]})));`
+  // );
+
+  return body;
 }
 
 function replaceJSToSVGCapture(body) {

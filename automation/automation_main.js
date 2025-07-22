@@ -5,12 +5,14 @@ const { loadFonts } = require("./svgWrite.js");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
+const { createRegexFromSnippet } = require("./jb-utils.js");
 
 global.page = null;
 global.browser = null;
 const downloadsFolder = path.join(os.homedir(), "Downloads");
 
 async function init() {
+  //This one uses your real chrome profile
   // const userDataDir = path.join(
   //   process.env.LOCALAPPDATA || path.join(process.env.HOME, ".config"),
   //   "Google/Chrome/User Data"
@@ -19,6 +21,7 @@ async function init() {
   const localAppData =
     process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local");
 
+  //Use a new profile
   const userDataDir = path.join(
     localAppData,
     "Google",
@@ -62,17 +65,19 @@ async function init() {
     ],
   });
 
+  //Remove webdriver prop
   await global.browser.addInitScript(() => {
     Object.defineProperty(navigator, "webdriver", {
       get: () => false,
     });
   });
 
-  loadFonts();
+  // loadFonts();
+  // await injectSVGCapture();
+
   global.page = await global.browser.newPage();
   await injectCustomURLForExporting();
-
-  // await injectSVGCapture();
+  await injectLayerDataCapture();
   await page.goto("https://jitter.video/file/?id=Zu8mPmRi3Ki4CQtG3ZJuRnkb");
 }
 
@@ -98,6 +103,35 @@ async function injectCustomURLForExporting() {
       await newPage.goto(newUrl);
     }
   });
+}
+
+async function injectLayerDataCapture() {
+  await page.route("**/*component*", async (route) => {
+    const response = await route.fetch();
+    let body = await response.text();
+
+    body = injectPrintLayerComp(body);
+    console.log("Injected Data Capture For layers");
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/javascript",
+      body,
+    });
+  });
+}
+
+function injectPrintLayerComp(body) {
+  const regexPrintNodeInfo = createRegexFromSnippet(
+    "this.lastEditCount = this.conf.tree.editsCount);"
+  );
+  body = body.replace(
+    regexPrintNodeInfo,
+    `this.lastEditCount = this.conf.tree.editsCount);
+    window.all_nodes = this.conf.tree.nodes;                           
+        `
+  );
+  return body;
 }
 
 async function runScanReplace() {
