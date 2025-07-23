@@ -24,9 +24,6 @@ export default function App() {
       <div>
         <ReferenceFrameList />
       </div>
-      <div>
-        <LinkList />
-      </div>
 
       {/* <button
         className="bg-red-100"

@@ -32,7 +32,7 @@ function ReferenceFrameList() {
       <div className="">
         <Btn onClick={() => addFrame()}> Add Reference Frame </Btn>
       </div>
-      <div className="bg-gray-100 max-h-44 overflow-y-auto">
+      <div className="bg-gray-100 overflow-y-auto">
         <div className="p-4">
           {framesList.map((frame) => getFrame(frame.id))}
         </div>
