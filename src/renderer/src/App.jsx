@@ -2,7 +2,7 @@ import React from "react";
 import "../index.css";
 import AnimationFrameField from "./components/AnimationFrameField";
 import ReferenceFrameList from "./components/ReferenceFrameList";
-import LinkList from "./components/LinkList";
+import { FRProvider } from "./FRProvider";
 
 export default function App() {
   return (
@@ -19,11 +19,12 @@ export default function App() {
         </p>
       </div>
 
-      <AnimationFrameField />
-
-      <div>
-        <ReferenceFrameList />
-      </div>
+      <FRProvider>
+        <AnimationFrameField />
+        <div>
+          <ReferenceFrameList />
+        </div>
+      </FRProvider>
 
       {/* <button
         className="bg-red-100"
