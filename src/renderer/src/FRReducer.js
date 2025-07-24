@@ -1,11 +1,31 @@
-const initialState = { user: "leo" };
+const structState = {
+  animationID: "",
+  refFrames: [
+    {
+      id: "UUID",
+      index: 0,
+      refFrameId: "",
+      refFramename: "",
+      translationFrameId: "",
+      translationName: "",
+      links: [],
+    },
+  ],
+
+  //....
+};
+
+const initialState = {
+  animationID: "",
+  refFrames: [],
+};
 
 function FRReducer(state, action) {
   switch (action.type) {
-    case "SET_USER":
-      return { ...state, user: action.payload };
-    case "TOGGLE_THEME":
-      return { ...state, theme: state.theme === "light" ? "dark" : "light" };
+    case "UPDATE_REF_FRAMES":
+      return { ...state, refFrames: action.payload.frames };
+    case "UPDATE_LINKS":
+    // return { ...state, theme: state.theme === "light" ? "dark" : "light" };
     default:
       return state;
   }

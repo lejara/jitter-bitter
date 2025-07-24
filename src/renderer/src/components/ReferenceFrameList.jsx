@@ -1,26 +1,34 @@
-import { useState, Fragment } from "react";
 import ReferenceFrameEntry from "./ReferenceFrameEntry";
 import Btn from "./btn";
+import { useFRDispatch, useFRState } from "../FRProvider";
 
 function ReferenceFrameList() {
-  const [framesList, setFramesList] = useState([]);
+  const { refFrames } = useFRState();
+  const dispatch = useFRDispatch();
 
   function addFrame() {
     const newFrame = { id: crypto.randomUUID() };
-    setFramesList((prev) => [...prev, { ...newFrame, index: prev.length + 1 }]);
+    const prev = refFrames;
+    dispatch({
+      type: "UPDATE_REF_FRAMES",
+      payload: { frames: [...prev, { ...newFrame, index: prev.length }] },
+    });
   }
 
   function removeFrame(id) {
-    let newList = framesList.filter((frame) => frame.id !== id);
-    newList = newList.map((frame, index) => ({ ...frame, index: index + 1 }));
-    setFramesList(newList);
+    let newList = refFrames.filter((frame) => frame.id !== id);
+    newList = newList.map((frame, index) => ({ ...frame, index: index }));
+    dispatch({
+      type: "UPDATE_REF_FRAMES",
+      payload: { frames: newList },
+    });
   }
 
   function getFrame(id) {
     return (
       <ReferenceFrameEntry
         key={id}
-        index={framesList.find((frame) => frame.id === id).index}
+        index={refFrames.find((frame) => frame.id === id).index}
         onRemove={() => removeFrame(id)}
       ></ReferenceFrameEntry>
     );
@@ -34,7 +42,7 @@ function ReferenceFrameList() {
       </div>
       <div className="bg-gray-100 overflow-y-auto">
         <div className="p-4">
-          {framesList.map((frame) => getFrame(frame.id))}
+          {refFrames.map((frame) => getFrame(frame.id))}
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import SetBtn from "./SetBtn";
 import LinkList from "./LinkList";
 
-function ReferenceFrameEntry({ onRemove, index }) {
+function ReferenceFrameEntry({ onRemove, index, onUpdate }) {
   const [referenceLayerId, setReferenceLayerId] = useState("N/A");
   const [translationLayerId, setTranslationLayerId] = useState("N/A");
 

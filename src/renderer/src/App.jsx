@@ -3,6 +3,7 @@ import "../index.css";
 import AnimationFrameField from "./components/AnimationFrameField";
 import ReferenceFrameList from "./components/ReferenceFrameList";
 import { FRProvider } from "./FRProvider";
+import PrintState from "./debug/PrintState";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
       </div>
 
       <FRProvider>
+        <PrintState />
         <AnimationFrameField />
         <div>
           <ReferenceFrameList />
