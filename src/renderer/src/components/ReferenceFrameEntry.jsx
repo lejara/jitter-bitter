@@ -1,23 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SetBtn from "./SetBtn";
 import LinkList from "./LinkList";
+import { useFRDispatch, useFRState } from "../FRProvider";
 
-function ReferenceFrameEntry({ onRemove, index, onUpdate }) {
-  const [referenceLayerId, setReferenceLayerId] = useState("N/A");
-  const [translationLayerId, setTranslationLayerId] = useState("N/A");
+function ReferenceFrameEntry({ onRemove, index }) {
+  const { refFrames } = useFRState();
+  const dispatch = useFRDispatch();
+  const [referenceLayerId, setReferenceLayerId] = useState(null);
+  const [translationLayerId, setTranslationLayerId] = useState(null);
 
   const [showLinkList, setShowLinkList] = useState(false);
 
+  useEffect(() => {
+    OnUpdate();
+  }, [referenceLayerId, translationLayerId]);
+
+  function OnUpdate() {
+    const newRefFrames = refFrames;
+    newRefFrames[index].refFrameId = referenceLayerId;
+    newRefFrames[index].translationFrameId = translationLayerId;
+    dispatch({ type: "UPDATE_REF_FRAMES", payload: { frames: newRefFrames } });
+  }
+
   return (
     <div className="flex justify-around text-xs flex-wrap">
-      <p>{index}.</p>
+      <p>{index + 1}.</p>
       <SetBtn onResponse={(layerId) => setReferenceLayerId(layerId)} />
 
-      <p>Reference Frame: {referenceLayerId}</p>
+      <p>
+        <b>Reference Frame:</b> {referenceLayerId ? referenceLayerId : "N/A"}
+      </p>
+
       <p>{`→`}</p>
 
       <SetBtn onResponse={(layerId) => setTranslationLayerId(layerId)} />
-      <p>Translation Frame: {translationLayerId}</p>
+      <p>
+        <b> Translation Frame: </b>
+        {translationLayerId ? translationLayerId : "N/A"}
+      </p>
       <button
         onClick={() => onRemove()}
         className="hover:bg-gray-300 px-4"
