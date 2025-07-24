@@ -7,7 +7,7 @@ function ReferenceFrameList() {
   const dispatch = useFRDispatch();
 
   function addFrame() {
-    const newFrame = { id: crypto.randomUUID() };
+    const newFrame = { id: crypto.randomUUID(), links: [] };
     const prev = refFrames;
     dispatch({
       type: "UPDATE_REF_FRAMES",

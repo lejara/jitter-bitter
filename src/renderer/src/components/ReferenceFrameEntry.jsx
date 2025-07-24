@@ -50,7 +50,9 @@ function ReferenceFrameEntry({ onRemove, index }) {
       >
         ^
       </button>
-      <div className="p-2">{showLinkList && <LinkList />}</div>
+      <div className="p-2">
+        {showLinkList && <LinkList refFrameIndex={index} />}
+      </div>
     </div>
   );
 }

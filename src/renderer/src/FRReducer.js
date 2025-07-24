@@ -8,7 +8,15 @@ const structState = {
       refFramename: "",
       translationFrameId: "",
       translationName: "",
-      links: [],
+      links: [
+        {
+          id: "",
+          index: 0,
+          refID: "",
+          animationID: "",
+          options: { typeTest: false },
+        },
+      ],
     },
   ],
 
@@ -25,7 +33,13 @@ function FRReducer(state, action) {
     case "UPDATE_REF_FRAMES":
       return { ...state, refFrames: action.payload.frames };
     case "UPDATE_LINKS":
-    // return { ...state, theme: state.theme === "light" ? "dark" : "light" };
+      const { refFrameIndex, links } = action.payload;
+      return {
+        ...state,
+        refFrames: state.refFrames.map((rf, i) =>
+          i === refFrameIndex ? { ...rf, links: links } : rf
+        ),
+      };
     default:
       return state;
   }
