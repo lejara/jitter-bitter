@@ -23,7 +23,7 @@ function ReferenceFrameEntry({ onRemove, index }) {
   }
 
   return (
-    <div className="flex justify-around text-xs flex-wrap">
+    <div className="flex justify-around text-xs flex-wrap p-2">
       <p>{index + 1}.</p>
       <SetBtn onResponse={(layerId) => setReferenceLayerId(layerId)} />
 
@@ -50,7 +50,7 @@ function ReferenceFrameEntry({ onRemove, index }) {
       >
         ^
       </button>
-      <div className="p-2">
+      <div className="w-full flex justify-center bg-gray-300">
         {showLinkList && <LinkList refFrameIndex={index} />}
       </div>
     </div>

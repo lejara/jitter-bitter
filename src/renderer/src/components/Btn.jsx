@@ -3,8 +3,8 @@ import React from "react";
 function Btn({ onClick, children }) {
   return (
     <button
-      className="    bg-blue-500        /* background color */
-    hover:bg-blue-600  /* darker on hover */
+      className="    bg-gray-500       /* background color */
+    hover:bg-gray-600  /* darker on hover */
     text-white         /* white text */
     font-semibold      /* semi-bold font */
     py-2               /* vertical padding */

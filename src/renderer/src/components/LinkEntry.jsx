@@ -6,14 +6,15 @@ function LinkEntry({ index, refFrameIndex, onRemove, onReorder }) {
   const [animationID, setAnimationID] = useState(null);
 
   return (
-    <div className="flex justify-center">
-      <div className="flex flex-col mr-2">
+    <div className="flex w-full justify-around p-2 items-center">
+      <div className="flex flex-col mr-2 items-center">
         <button
           className={`w-full hover:bg-gray-200 font-bold text-sm p-1 `}
           onClick={() => onReorder(1)}
         >
           ^
         </button>
+        <p className=" text-xs font-bold">{index + 1}</p>
         <button
           className={`w-full hover:bg-gray-200 font-bold text-sm p-1 rotate-180`}
           onClick={() => onReorder(-1)}
@@ -21,14 +22,19 @@ function LinkEntry({ index, refFrameIndex, onRemove, onReorder }) {
           ^
         </button>
       </div>
-      <SetBtn onResponse={(layerId) => setRefID(layerId)} />
+      <div>
+        <SetBtn onResponse={(layerId) => setRefID(layerId)} />
+      </div>
+
       <p>Ref: {refID ? refID : "Unset"}</p>
       <p>:</p>
-      <SetBtn onResponse={(layerId) => setAnimationID(layerId)} />
+      <div>
+        <SetBtn onResponse={(layerId) => setAnimationID(layerId)} />
+      </div>
       <p>Animtion: {animationID ? animationID : "Unset"}</p>
       <button
         onClick={() => onRemove()}
-        className="hover:bg-gray-300 px-4"
+        className="hover:bg-gray-200 p-4"
       >{`❌`}</button>
     </div>
   );
