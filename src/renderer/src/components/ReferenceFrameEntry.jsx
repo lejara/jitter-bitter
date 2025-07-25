@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SetBtn from "./SetBtn";
 import LinkList from "./LinkList";
 import { useFRDispatch, useFRState } from "../FRProvider";
@@ -6,37 +6,44 @@ import { useFRDispatch, useFRState } from "../FRProvider";
 function ReferenceFrameEntry({ onRemove, index }) {
   const { refFrames } = useFRState();
   const dispatch = useFRDispatch();
-  const [referenceLayerId, setReferenceLayerId] = useState(null);
-  const [translationLayerId, setTranslationLayerId] = useState(null);
 
   const [showLinkList, setShowLinkList] = useState(false);
 
-  useEffect(() => {
-    OnUpdate();
-  }, [referenceLayerId, translationLayerId]);
+  const refFrameId = useMemo(
+    () => refFrames[index].refFrameId,
+    [refFrames, index]
+  );
+  const translationFrameId = useMemo(
+    () => refFrames[index].translationFrameId,
+    [refFrames, index]
+  );
 
-  function OnUpdate() {
+  function OnUpdate({ newRefFrameId, newTranslationFrameId }) {
     const newRefFrames = refFrames;
-    newRefFrames[index].refFrameId = referenceLayerId;
-    newRefFrames[index].translationFrameId = translationLayerId;
+    newRefFrames[index].refFrameId = newRefFrameId ? newRefFrameId : refFrameId;
+    newRefFrames[index].translationFrameId = newTranslationFrameId
+      ? newTranslationFrameId
+      : translationFrameId;
     dispatch({ type: "UPDATE_REF_FRAMES", payload: { frames: newRefFrames } });
   }
 
   return (
     <div className="flex justify-around text-xs flex-wrap p-2">
       <p>{index + 1}.</p>
-      <SetBtn onResponse={(layerId) => setReferenceLayerId(layerId)} />
+      <SetBtn onResponse={(layerId) => OnUpdate({ newRefFrameId: layerId })} />
 
       <p>
-        <b>Reference Frame:</b> {referenceLayerId ? referenceLayerId : "N/A"}
+        <b>Reference Frame:</b> {refFrameId ? refFrameId : "N/A"}
       </p>
 
       <p className="text-lg">{`→`}</p>
 
-      <SetBtn onResponse={(layerId) => setTranslationLayerId(layerId)} />
+      <SetBtn
+        onResponse={(layerId) => OnUpdate({ newTranslationFrameId: layerId })}
+      />
       <p>
         <b> Translation Frame: </b>
-        {translationLayerId ? translationLayerId : "N/A"}
+        {translationFrameId ? translationFrameId : "N/A"}
       </p>
       <button
         onClick={() => onRemove()}

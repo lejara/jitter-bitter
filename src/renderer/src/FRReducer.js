@@ -31,7 +31,10 @@ const initialState = {
 function FRReducer(state, action) {
   switch (action.type) {
     case "UPDATE_REF_FRAMES":
-      return { ...state, refFrames: action.payload.frames };
+      return {
+        ...state,
+        refFrames: action.payload.frames.map((frames) => frames),
+      };
     case "UPDATE_LINKS":
       const { refFrameIndex, links } = action.payload;
       return {
