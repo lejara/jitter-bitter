@@ -70,13 +70,12 @@ function LinkList({ refFrameIndex }) {
   }
 
   return (
-    <div className="w-1/2 p-2">
+    <div className=" w-5/6 p-2">
       <div>
         <Btn onClick={() => addLink()}>Add Link</Btn>
       </div>
-      <div className="flex flex-wrap">
-        {links.map((link) => getLink(link.id))}
-      </div>
+
+      {links.map((link) => getLink(link.id))}
     </div>
   );
 }
