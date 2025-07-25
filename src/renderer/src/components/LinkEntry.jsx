@@ -1,9 +1,34 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SetBtn from "./SetBtn";
+import { useFRDispatch, useFRState } from "../FRProvider";
 
 function LinkEntry({ index, refFrameIndex, onRemove, onReorder }) {
-  const [refID, setRefID] = useState(null);
-  const [animationID, setAnimationID] = useState(null);
+  const { refFrames } = useFRState();
+  const dispatch = useFRDispatch();
+
+  const refID = useMemo(
+    () => refFrames[refFrameIndex].links[index].refID,
+    [index, refFrameIndex, refFrames]
+  );
+
+  const animationID = useMemo(
+    () => refFrames[refFrameIndex].links[index].animationID,
+    [index, refFrameIndex, refFrames]
+  );
+
+  function OnUpdate({ newRefID, newAnimationID }) {
+    const links = refFrames[refFrameIndex].links;
+    links[index].refID = newRefID ? newRefID : refID;
+    links[index].animationID = newAnimationID ? newAnimationID : animationID;
+
+    dispatch({
+      type: "UPDATE_LINKS",
+      payload: {
+        refFrameIndex,
+        links: links,
+      },
+    });
+  }
 
   return (
     <div className="flex w-full justify-around p-2 items-center">
@@ -23,13 +48,15 @@ function LinkEntry({ index, refFrameIndex, onRemove, onReorder }) {
         </button>
       </div>
       <div>
-        <SetBtn onResponse={(layerId) => setRefID(layerId)} />
+        <SetBtn onResponse={(layerId) => OnUpdate({ newRefID: layerId })} />
       </div>
 
       <p>Ref: {refID ? refID : "Unset"}</p>
       <p>:</p>
       <div>
-        <SetBtn onResponse={(layerId) => setAnimationID(layerId)} />
+        <SetBtn
+          onResponse={(layerId) => OnUpdate({ newAnimationID: layerId })}
+        />
       </div>
       <p>Animtion: {animationID ? animationID : "Unset"}</p>
       <button

@@ -61,6 +61,7 @@ function LinkList({ refFrameIndex }) {
     return (
       <LinkEntry
         key={id}
+        refFrameIndex={refFrameIndex}
         index={links.find((link) => link.id === id).index}
         onRemove={() => removeLink(id)}
         onReorder={(dir) => reorder(id, dir)}
