@@ -31,7 +31,7 @@ function ReferenceFrameEntry({ onRemove, index }) {
         <b>Reference Frame:</b> {referenceLayerId ? referenceLayerId : "N/A"}
       </p>
 
-      <p>{`→`}</p>
+      <p className="text-lg">{`→`}</p>
 
       <SetBtn onResponse={(layerId) => setTranslationLayerId(layerId)} />
       <p>
@@ -43,7 +43,7 @@ function ReferenceFrameEntry({ onRemove, index }) {
         className="hover:bg-gray-300 px-4"
       >{`❌`}</button>
       <button
-        className={`w-full hover:bg-gray-200 font-bold text-md p-1 ${
+        className={`w-full hover:bg-gray-200 font-bold text-lg p-3 ${
           showLinkList && "rotate-180"
         }`}
         onClick={() => setShowLinkList(!showLinkList)}

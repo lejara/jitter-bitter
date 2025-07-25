@@ -34,7 +34,28 @@ function LinkList({ refFrameIndex }) {
     });
   }
 
-  function reorder(id, dir) {}
+  function reorder(id, dir) {
+    const link = links.find((link) => link.id === id);
+
+    const from = link.index;
+    let to = link.index + dir;
+
+    let newLinks = links.slice();
+
+    to = Math.max(0, Math.min(newLinks.length - 1, to));
+    if (from === to) return;
+
+    newLinks.splice(to, 0, newLinks.splice(from, 1)[0]);
+    newLinks = newLinks.map((link, index) => ({ ...link, index: index }));
+
+    dispatch({
+      type: "UPDATE_LINKS",
+      payload: {
+        refFrameIndex,
+        links: newLinks,
+      },
+    });
+  }
 
   function getLink(id) {
     return (

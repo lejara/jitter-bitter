@@ -10,14 +10,14 @@ function LinkEntry({ index, refFrameIndex, onRemove, onReorder }) {
       <div className="flex flex-col mr-2 items-center">
         <button
           className={`w-full hover:bg-gray-200 font-bold text-sm p-1 `}
-          onClick={() => onReorder(1)}
+          onClick={() => onReorder(-1)}
         >
           ^
         </button>
         <p className=" text-xs font-bold">{index + 1}</p>
         <button
           className={`w-full hover:bg-gray-200 font-bold text-sm p-1 rotate-180`}
-          onClick={() => onReorder(-1)}
+          onClick={() => onReorder(1)}
         >
           ^
         </button>
